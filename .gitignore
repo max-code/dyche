@@ -1,0 +1,32 @@
+# Build output directory
+/target/
+**/target/
+
+# Generated files
+Cargo.lock
+**/*.rs.bk
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+.DS_Store
+
+# Debug files
+**/*.pdb
+
+# Environment files
+.env
+.env.local
+
+# Generated documentation
+/doc/
+/*/doc/
+
+# Any test artifacts
+*.profraw
+
+# Visual Studio Code Rust plugin specific files
+*.rls

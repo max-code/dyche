@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "fpl_api",
+    "fpl_api_scraper",
+    "fpl_models"
+]
+resolver = "2"

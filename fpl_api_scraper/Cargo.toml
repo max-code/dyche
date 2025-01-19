@@ -1,0 +1,8 @@
+[package]
+name = "fpl_api_scraper"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+fpl_api = { path = "../fpl_api" }
+fpl_models = { path = "../fpl_models" }
