@@ -34,6 +34,7 @@ impl FplClient {
 
     pub async fn get<T: FplRequest>(&self, request: T) -> Result<T::Response, reqwest::Error> {
         let url = request.to_url(&self.base_url);
+        println!("Making request with URL: {}", url);
         self.client
             .get(&url)
             .send()
@@ -46,7 +47,7 @@ impl FplClient {
 #[cfg(test)]
 mod tests {
 
-    use requests::{FixtureRequest, MiniLeagueRequest, PlayerRequest};
+    use requests::{FixtureRequest, GameWeekPlayersStatsRequest, MiniLeagueRequest, PlayerRequest};
     use types::{GameWeek, TeamId};
     use types::{LeagueId, PlayerId};
 
@@ -68,7 +69,7 @@ mod tests {
         // Arrange
         let client = FplClient::new();
         let game_week = GameWeek::new(22);
-        assert!(game_week.is_some(), "GameWeek 22 should be valid");
+        assert!(game_week.is_ok(), "GameWeek 22 should be valid");
 
         // Act
         let request = TeamGameWeekRequest::new(TeamId::new(1871038), game_week.unwrap());
@@ -118,5 +119,20 @@ mod tests {
         // Assert
         println!("Response: {:#?}", response);
         // Add any assertions about the response here
+    }
+
+    #[tokio::test]
+    async fn test_game_week_players_stats_request() {
+        // Arrange
+        let client = FplClient::new();
+        let gw = GameWeek::new(20);
+        assert!(gw.is_ok(), "GameWeek 20 should be valid.");
+
+        // Act
+        let request = GameWeekPlayersStatsRequest::new(gw.unwrap());
+        let response = client.get(request).await.unwrap();
+
+        // Assert
+        println!("Response: {:#?}", response);
     }
 }

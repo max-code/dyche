@@ -2,12 +2,17 @@ use crate::types::GameWeek;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
-// #[derive(Debug, Deserialize)]
-// pub struct FixturesResponse {
-//     pub fixtures: Vec<Fixture>,
-// }
-
 pub type FixturesResponse = Vec<GameweekFixture>;
+
+#[derive(Debug, Deserialize)]
+pub struct GameweekFixture {
+    #[serde(flatten)]
+    pub common: FixtureCommon,
+    pub started: bool,
+    pub team_h_difficulty: i32,
+    pub team_a_difficulty: i32,
+    pub pulse_id: i32,
+}
 
 #[derive(Debug, Deserialize)]
 pub struct FixtureCommon {
@@ -31,16 +36,4 @@ pub struct PlayerFixture {
     pub event_name: String,
     pub is_home: bool,
     pub difficulty: i32,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct GameweekFixture {
-    #[serde(flatten)]
-    pub common: FixtureCommon,
-    pub started: bool,
-    pub team_h_difficulty: i32,
-    pub team_a_difficulty: i32,
-    pub pulse_id: i32,
-    // We can add stats later if needed
-    // pub stats: Vec<FixtureStat>,
 }

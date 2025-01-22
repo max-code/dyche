@@ -9,6 +9,7 @@ where
 }
 
 pub mod fixtures;
+pub mod game_week_players_stats;
 pub mod mini_league;
 pub mod player;
 pub mod team;

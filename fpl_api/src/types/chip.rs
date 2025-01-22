@@ -1,25 +1,27 @@
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Serialize};
 use std::fmt::Display;
+use std::str::FromStr;
 
-/* GameWeek - positive integer in the range  [1,38] */
-#[derive(Debug)]
+/* Chip - wildcard, freehit, triple cap, assman */
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Chip {
+    #[serde(rename = "wildcard")]
     WildCard,
+    #[serde(rename = "freehit")]
     FreeHit,
+    #[serde(rename = "3xc")]
     TripleCaptain,
 }
 
-impl Chip {
-    pub fn new(chip: &str) -> Option<Self> {
-        match chip {
-            "freehit" => Some(Self::FreeHit),
-            "wildcard" => Some(Self::WildCard),
-            "3xc" => Some(Self::TripleCaptain),
-            _ => None,
-        }
-    }
+#[derive(Debug, thiserror::Error)]
+#[error("Invalid chip name: {0}")]
+pub struct ParseChipError(String);
 
-    pub fn value(&self) -> &str {
+impl Chip {
+    pub const ALL: [Chip; 3] = [Chip::WildCard, Chip::FreeHit, Chip::TripleCaptain];
+
+    pub fn as_str(&self) -> &'static str {
         match self {
             Self::WildCard => "wildcard",
             Self::FreeHit => "freehit",
@@ -30,24 +32,19 @@ impl Chip {
 
 impl Display for Chip {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.value())
+        write!(f, "{}", self.as_str())
     }
 }
 
-impl TryFrom<&str> for Chip {
-    type Error = String;
+impl FromStr for Chip {
+    type Err = ParseChipError;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        Chip::new(value).ok_or_else(|| format!("Chip must be between 1 and 4, got {}", value))
-    }
-}
-
-impl<'de> Deserialize<'de> for Chip {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let value = String::deserialize(deserializer)?;
-        value.as_str().try_into().map_err(serde::de::Error::custom)
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "freehit" => Ok(Self::FreeHit),
+            "wildcard" => Ok(Self::WildCard),
+            "3xc" => Ok(Self::TripleCaptain),
+            _ => Err(ParseChipError(s.to_owned())),
+        }
     }
 }

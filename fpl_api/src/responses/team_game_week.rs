@@ -1,4 +1,4 @@
-use crate::types::{Chip, ElementType, GameWeek, TeamId};
+use crate::types::{Chip, GameWeek, PlayerPosition, TeamId};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -32,7 +32,7 @@ pub struct Pick {
     pub multiplier: u8,
     pub is_captain: bool,
     pub is_vice_captain: bool,
-    pub element_type: ElementType,
+    pub element_type: PlayerPosition,
 }
 
 impl Pick {
