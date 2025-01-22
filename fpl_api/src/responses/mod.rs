@@ -14,3 +14,4 @@ pub mod mini_league;
 pub mod player;
 pub mod team;
 pub mod team_game_week;
+pub mod transfers;

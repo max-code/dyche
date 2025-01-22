@@ -47,7 +47,10 @@ impl FplClient {
 #[cfg(test)]
 mod tests {
 
-    use requests::{FixtureRequest, GameWeekPlayersStatsRequest, MiniLeagueRequest, PlayerRequest};
+    use requests::{
+        FixtureRequest, GameWeekPlayersStatsRequest, MiniLeagueRequest, PlayerRequest,
+        TransfersRequest,
+    };
     use types::{GameWeek, TeamId};
     use types::{LeagueId, PlayerId};
 
@@ -130,6 +133,19 @@ mod tests {
 
         // Act
         let request = GameWeekPlayersStatsRequest::new(gw.unwrap());
+        let response = client.get(request).await.unwrap();
+
+        // Assert
+        println!("Response: {:#?}", response);
+    }
+
+    #[tokio::test]
+    async fn test_transfers_request() {
+        // Arrange
+        let client = FplClient::new();
+
+        // Act
+        let request = TransfersRequest::new(TeamId::new(1871038));
         let response = client.get(request).await.unwrap();
 
         // Assert
