@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 /* PlayerPosition - Number representing the players FPL position */
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(try_from = "u8")]
+#[serde(try_from = "i16")]
 pub enum PlayerPosition {
     Goalkeeper,
     Defender,
@@ -17,7 +17,7 @@ pub enum PlayerPosition {
 pub struct ParsePositionError(String);
 
 impl PlayerPosition {
-    pub fn to_u8(&self) -> u8 {
+    pub fn to_i16(&self) -> i16 {
         match self {
             PlayerPosition::Goalkeeper => 1,
             PlayerPosition::Defender => 2,
@@ -65,10 +65,10 @@ impl FromStr for PlayerPosition {
     }
 }
 
-impl TryFrom<u8> for PlayerPosition {
+impl TryFrom<i16> for PlayerPosition {
     type Error = ParsePositionError;
 
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
+    fn try_from(value: i16) -> Result<Self, Self::Error> {
         match value {
             1 => Ok(Self::Goalkeeper),
             2 => Ok(Self::Defender),

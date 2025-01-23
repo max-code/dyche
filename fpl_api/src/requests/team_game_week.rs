@@ -1,6 +1,6 @@
 use super::FplRequest;
 use crate::responses::team_game_week::TeamGameWeekResponse;
-use crate::types::{GameWeekId, TeamId};
+use fpl_common::types::{GameWeekId, TeamId};
 
 pub struct TeamGameWeekRequest {
     pub team_id: TeamId,

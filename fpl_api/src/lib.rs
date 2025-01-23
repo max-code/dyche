@@ -1,6 +1,5 @@
 pub mod requests;
 pub mod responses;
-pub mod types;
 
 use requests::FplRequest;
 use reqwest::Client;
@@ -47,12 +46,11 @@ impl FplClient {
 #[cfg(test)]
 mod tests {
 
+    use fpl_common::types::{GameWeekId, LeagueId, PlayerId, TeamId};
     use requests::{
         FixtureRequest, GameStateRequest, GameWeekPlayersStatsRequest, MiniLeagueRequest,
         PlayerRequest, TransfersRequest,
     };
-    use types::{GameWeekId, TeamId};
-    use types::{LeagueId, PlayerId};
 
     use super::*;
     use crate::requests::TeamGameWeekRequest;
@@ -64,7 +62,7 @@ mod tests {
         let request = TeamRequest::new(TeamId::new(1871038));
 
         let response = client.get(request).await.unwrap();
-        println!("Response: {:?}", response);
+        println!("Response: {:#?}", response);
     }
 
     #[tokio::test]

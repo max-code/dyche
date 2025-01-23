@@ -1,4 +1,4 @@
-use crate::types::{FixtureId, PlayerId};
+use fpl_common::types::{FixtureId, PlayerId};
 
 use super::string_to_f32;
 use serde::Deserialize;

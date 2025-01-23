@@ -3,22 +3,24 @@ use std::fmt::Display;
 use std::ops::Deref;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-#[serde(try_from = "u8")]
-pub struct GameWeekId(u8);
+#[serde(try_from = "i32")]
+#[derive(sqlx::Type)]
+#[sqlx(transparent)]
+pub struct GameWeekId(i32);
 
 #[derive(Debug, thiserror::Error)]
 #[error("GameWeek must be between 1 and 38, got {0}")]
-pub struct GameWeekError(u8);
+pub struct GameWeekError(i32);
 
 impl GameWeekId {
-    pub const MIN: u8 = 1;
-    pub const MAX: u8 = 38;
-    pub const ALL: std::ops::RangeInclusive<u8> = Self::MIN..=Self::MAX;
+    pub const MIN: i32 = 1;
+    pub const MAX: i32 = 38;
+    pub const ALL: std::ops::RangeInclusive<i32> = Self::MIN..=Self::MAX;
 
     pub const FIRST: GameWeekId = GameWeekId(Self::MIN);
     pub const LAST: GameWeekId = GameWeekId(Self::MAX);
 
-    pub fn new(game_week: u8) -> Result<Self, GameWeekError> {
+    pub fn new(game_week: i32) -> Result<Self, GameWeekError> {
         if Self::ALL.contains(&game_week) {
             Ok(Self(game_week))
         } else {
@@ -52,7 +54,7 @@ impl GameWeekId {
 }
 
 impl Deref for GameWeekId {
-    type Target = u8;
+    type Target = i32;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -65,21 +67,27 @@ impl Display for GameWeekId {
     }
 }
 
-impl TryFrom<u8> for GameWeekId {
+impl TryFrom<i32> for GameWeekId {
     type Error = GameWeekError;
 
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
         Self::new(value)
     }
 }
 
-impl PartialEq<u8> for GameWeekId {
-    fn eq(&self, other: &u8) -> bool {
+impl From<GameWeekId> for i32 {
+    fn from(id: GameWeekId) -> i32 {
+        id.0 as i32
+    }
+}
+
+impl PartialEq<i32> for GameWeekId {
+    fn eq(&self, other: &i32) -> bool {
         self.0 == *other
     }
 }
 
-impl PartialEq<GameWeekId> for u8 {
+impl PartialEq<GameWeekId> for i32 {
     fn eq(&self, other: &GameWeekId) -> bool {
         *self == other.0
     }

@@ -1,8 +1,6 @@
 [package]
-name = "fpl_models"
+name = "fpl_scraper"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-serde = "1.0.217"
-sqlx = "0.8.3"

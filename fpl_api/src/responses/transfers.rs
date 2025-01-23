@@ -1,5 +1,5 @@
-use crate::types::{GameWeekId, PlayerId, TeamId};
 use chrono::{DateTime, Utc};
+use fpl_common::types::{GameWeekId, PlayerId, TeamId};
 use serde::Deserialize;
 
 pub type TransfersResponse = Vec<TransferResponse>;

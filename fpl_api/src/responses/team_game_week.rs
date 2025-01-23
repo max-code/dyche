@@ -1,4 +1,4 @@
-use crate::types::{Chip, GameWeekId, PlayerPosition, TeamId};
+use fpl_common::types::{Chip, GameWeekId, PlayerPosition, TeamId};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]

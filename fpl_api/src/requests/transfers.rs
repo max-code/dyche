@@ -1,6 +1,6 @@
 use super::FplRequest;
 use crate::responses::transfers::TransfersResponse;
-use crate::types::TeamId;
+use fpl_common::types::TeamId;
 
 pub struct TransfersRequest {
     team_id: TeamId,

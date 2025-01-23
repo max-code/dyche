@@ -1,6 +1,6 @@
 use super::FplRequest;
 use crate::responses::player::PlayerResponse;
-use crate::types::PlayerId;
+use fpl_common::types::PlayerId;
 
 pub struct PlayerRequest {
     pub player_id: PlayerId,

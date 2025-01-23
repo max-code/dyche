@@ -1,7 +1,3 @@
 [workspace]
-members = [
-    "fpl_api",
-    "fpl_api_scraper",
-    "fpl_models"
-]
+members = ["fpl_api", "fpl_common", "fpl_db", "fpl_scraper"]
 resolver = "2"

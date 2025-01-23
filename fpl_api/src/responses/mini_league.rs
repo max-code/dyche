@@ -1,5 +1,5 @@
-use crate::types::{GameWeekId, LeagueId, TeamId};
 use chrono::{DateTime, Utc};
+use fpl_common::types::{GameWeekId, LeagueId, TeamId};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]

@@ -1,7 +1,7 @@
 use super::string_to_f32;
-use crate::types::{FixtureId, GameWeekId};
-use crate::{responses::fixtures::FixtureCommon, types::PlayerId};
+use crate::responses::fixtures::FixtureCommon;
 use chrono::{DateTime, Utc};
+use fpl_common::types::{FixtureId, GameWeekId, PlayerId};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]

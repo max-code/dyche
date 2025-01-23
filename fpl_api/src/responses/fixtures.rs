@@ -1,5 +1,5 @@
-use crate::types::{ClubId, FixtureId, GameWeekId};
 use chrono::{DateTime, Utc};
+use fpl_common::types::{ClubId, FixtureId, GameWeekId};
 use serde::Deserialize;
 
 pub type FixturesResponse = Vec<GameweekFixture>;
@@ -17,7 +17,7 @@ pub struct GameweekFixture {
 #[derive(Debug, Deserialize)]
 pub struct FixtureCommon {
     pub id: FixtureId,
-    pub code: i32,
+    pub code: u32,
     pub team_h: ClubId,
     pub team_h_score: Option<u8>,
     pub team_a: ClubId,

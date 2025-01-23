@@ -1,6 +1,6 @@
 use super::FplRequest;
 use crate::responses::mini_league::MiniLeagueResponse;
-use crate::types::LeagueId;
+use fpl_common::types::LeagueId;
 
 pub struct MiniLeagueRequest {
     pub league_id: LeagueId,

@@ -1,0 +1,19 @@
+[package]
+name = "fpl_db"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sqlx = { version = "0.7", features = [
+    "runtime-tokio-native-tls",
+    "postgres",
+    "chrono",
+    "uuid",
+] }
+tokio = { version = "1", features = ["full"] }
+dotenvy = "0.15"
+fpl_common = { path = "../fpl_common" }
+fpl_api = { path = "../fpl_api" }
+chrono = "0.4.39"
+anyhow = "1.0.95"
+dotenv = "0.15.0"

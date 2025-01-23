@@ -1,6 +1,6 @@
 use super::FplRequest;
 use crate::responses::team::TeamResponse;
-use crate::types::TeamId;
+use fpl_common::types::TeamId;
 
 pub struct TeamRequest {
     pub team_id: TeamId,

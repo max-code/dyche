@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::types::{Chip, ClubId, GameWeekId, PlayerId};
+use fpl_common::types::{Chip, ClubId, GameWeekId, PlayerId};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GameStateResponse {
