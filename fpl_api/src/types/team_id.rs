@@ -5,6 +5,7 @@ use std::ops::Deref;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 pub struct TeamId(pub u32);
 
+/* This is the USERS id, e.g. mine is 1871038. NOT related to clubs e.g. Forest, They're called clubs */
 impl TeamId {
     pub const fn new(id: u32) -> Self {
         Self(id)

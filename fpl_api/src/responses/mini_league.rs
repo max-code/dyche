@@ -1,4 +1,4 @@
-use crate::types::{GameWeek, LeagueId, TeamId};
+use crate::types::{GameWeekId, LeagueId, TeamId};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
@@ -19,7 +19,7 @@ pub struct League {
     pub league_type: String,
     pub scoring: String,
     pub admin_entry: TeamId,
-    pub start_event: GameWeek,
+    pub start_event: GameWeekId,
     pub code_privacy: String,
     pub has_cup: bool,
     pub cup_league: Option<u32>,

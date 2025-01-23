@@ -1,13 +1,13 @@
 use super::FplRequest;
 use crate::responses::game_week_players_stats::GameWeekPlayersStatsResponse;
-use crate::types::GameWeek;
+use crate::types::GameWeekId;
 
 pub struct GameWeekPlayersStatsRequest {
-    pub game_week: GameWeek,
+    pub game_week: GameWeekId,
 }
 
 impl GameWeekPlayersStatsRequest {
-    pub fn new(game_week: GameWeek) -> Self {
+    pub fn new(game_week: GameWeekId) -> Self {
         Self { game_week }
     }
 }

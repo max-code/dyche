@@ -1,4 +1,4 @@
-use crate::types::{Chip, GameWeek, PlayerPosition, TeamId};
+use crate::types::{Chip, GameWeekId, PlayerPosition, TeamId};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -11,7 +11,7 @@ pub struct TeamGameWeekResponse {
 
 #[derive(Debug, Deserialize)]
 pub struct EntryHistory {
-    pub event: GameWeek,
+    pub event: GameWeekId,
     pub points: u8,
     pub total_points: u16,
     pub rank: u32,
@@ -46,5 +46,5 @@ pub struct AutomaticSub {
     pub entry: TeamId,
     pub element_in: u16,
     pub element_out: u16,
-    pub event: GameWeek,
+    pub event: GameWeekId,
 }

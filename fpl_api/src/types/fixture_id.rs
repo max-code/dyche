@@ -34,7 +34,7 @@ impl Deref for FixtureId {
 
 impl Display for FixtureId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "GW{}", self.0)
+        write!(f, "{}", self.0)
     }
 }
 

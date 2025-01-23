@@ -1,4 +1,4 @@
-use crate::types::GameWeek;
+use crate::types::{ClubId, FixtureId, GameWeekId};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
@@ -9,31 +9,22 @@ pub struct GameweekFixture {
     #[serde(flatten)]
     pub common: FixtureCommon,
     pub started: bool,
-    pub team_h_difficulty: i32,
-    pub team_a_difficulty: i32,
-    pub pulse_id: i32,
+    pub team_h_difficulty: u8,
+    pub team_a_difficulty: u8,
+    pub pulse_id: u32,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct FixtureCommon {
-    pub id: i32,
+    pub id: FixtureId,
     pub code: i32,
-    pub team_h: i32,
-    pub team_h_score: Option<i32>,
-    pub team_a: i32,
-    pub team_a_score: Option<i32>,
-    pub event: GameWeek,
+    pub team_h: ClubId,
+    pub team_h_score: Option<u8>,
+    pub team_a: ClubId,
+    pub team_a_score: Option<u8>,
+    pub event: GameWeekId,
     pub finished: bool,
-    pub minutes: i32,
+    pub minutes: u8,
     pub provisional_start_time: bool,
     pub kickoff_time: DateTime<Utc>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct PlayerFixture {
-    #[serde(flatten)]
-    pub common: FixtureCommon,
-    pub event_name: String,
-    pub is_home: bool,
-    pub difficulty: i32,
 }

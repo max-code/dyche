@@ -48,10 +48,10 @@ impl FplClient {
 mod tests {
 
     use requests::{
-        FixtureRequest, GameWeekPlayersStatsRequest, MiniLeagueRequest, PlayerRequest,
-        TransfersRequest,
+        FixtureRequest, GameStateRequest, GameWeekPlayersStatsRequest, MiniLeagueRequest,
+        PlayerRequest, TransfersRequest,
     };
-    use types::{GameWeek, TeamId};
+    use types::{GameWeekId, TeamId};
     use types::{LeagueId, PlayerId};
 
     use super::*;
@@ -71,7 +71,7 @@ mod tests {
     async fn test_team_game_week_request() {
         // Arrange
         let client = FplClient::new();
-        let game_week = GameWeek::new(22);
+        let game_week = GameWeekId::new(22);
         assert!(game_week.is_ok(), "GameWeek 22 should be valid");
 
         // Act
@@ -128,7 +128,7 @@ mod tests {
     async fn test_game_week_players_stats_request() {
         // Arrange
         let client = FplClient::new();
-        let gw = GameWeek::new(20);
+        let gw = GameWeekId::new(20);
         assert!(gw.is_ok(), "GameWeek 20 should be valid.");
 
         // Act
@@ -146,6 +146,19 @@ mod tests {
 
         // Act
         let request = TransfersRequest::new(TeamId::new(1871038));
+        let response = client.get(request).await.unwrap();
+
+        // Assert
+        println!("Response: {:#?}", response);
+    }
+
+    #[tokio::test]
+    async fn test_game_state_request() {
+        // Arrange
+        let client = FplClient::new();
+
+        // Act
+        let request = GameStateRequest::new();
         let response = client.get(request).await.unwrap();
 
         // Assert

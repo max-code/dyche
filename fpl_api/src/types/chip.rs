@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
-/* Chip - wildcard, freehit, triple cap, assman */
+/* Chip - wildcard, freehit, triple cap, assmanm bboost */
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Chip {
@@ -12,6 +12,8 @@ pub enum Chip {
     FreeHit,
     #[serde(rename = "3xc")]
     TripleCaptain,
+    #[serde(rename = "bboost")]
+    BenchBoost,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -26,6 +28,7 @@ impl Chip {
             Self::WildCard => "wildcard",
             Self::FreeHit => "freehit",
             Self::TripleCaptain => "3xc",
+            Self::BenchBoost => "bboost",
         }
     }
 }
@@ -44,6 +47,7 @@ impl FromStr for Chip {
             "freehit" => Ok(Self::FreeHit),
             "wildcard" => Ok(Self::WildCard),
             "3xc" => Ok(Self::TripleCaptain),
+            "bboost" => Ok(Self::BenchBoost),
             _ => Err(ParseChipError(s.to_owned())),
         }
     }

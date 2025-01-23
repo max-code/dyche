@@ -1,4 +1,4 @@
-use crate::types::{GameWeek, PlayerId, TeamId};
+use crate::types::{GameWeekId, PlayerId, TeamId};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
@@ -11,6 +11,6 @@ pub struct TransferResponse {
     pub element_in_cost: u8,
     pub element_out_cost: u8,
     pub entry: TeamId,
-    pub event: GameWeek,
+    pub event: GameWeekId,
     pub time: DateTime<Utc>,
 }
