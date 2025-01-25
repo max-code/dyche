@@ -3,24 +3,24 @@ use std::fmt::Display;
 use std::ops::Deref;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-#[serde(try_from = "i32")]
+#[serde(try_from = "i16")]
 #[derive(sqlx::Type)]
 #[sqlx(transparent)]
-pub struct GameWeekId(i32);
+pub struct GameWeekId(i16);
 
 #[derive(Debug, thiserror::Error)]
 #[error("GameWeek must be between 1 and 38, got {0}")]
-pub struct GameWeekError(i32);
+pub struct GameWeekError(i16);
 
 impl GameWeekId {
-    pub const MIN: i32 = 1;
-    pub const MAX: i32 = 38;
-    pub const ALL: std::ops::RangeInclusive<i32> = Self::MIN..=Self::MAX;
+    pub const MIN: i16 = 1;
+    pub const MAX: i16 = 38;
+    pub const ALL: std::ops::RangeInclusive<i16> = Self::MIN..=Self::MAX;
 
     pub const FIRST: GameWeekId = GameWeekId(Self::MIN);
     pub const LAST: GameWeekId = GameWeekId(Self::MAX);
 
-    pub fn new(game_week: i32) -> Result<Self, GameWeekError> {
+    pub fn new(game_week: i16) -> Result<Self, GameWeekError> {
         if Self::ALL.contains(&game_week) {
             Ok(Self(game_week))
         } else {
@@ -54,7 +54,7 @@ impl GameWeekId {
 }
 
 impl Deref for GameWeekId {
-    type Target = i32;
+    type Target = i16;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -67,27 +67,27 @@ impl Display for GameWeekId {
     }
 }
 
-impl TryFrom<i32> for GameWeekId {
+impl TryFrom<i16> for GameWeekId {
     type Error = GameWeekError;
 
-    fn try_from(value: i32) -> Result<Self, Self::Error> {
+    fn try_from(value: i16) -> Result<Self, Self::Error> {
         Self::new(value)
     }
 }
 
-impl From<GameWeekId> for i32 {
-    fn from(id: GameWeekId) -> i32 {
-        id.0 as i32
+impl From<GameWeekId> for i16 {
+    fn from(id: GameWeekId) -> i16 {
+        id.0 as i16
     }
 }
 
-impl PartialEq<i32> for GameWeekId {
-    fn eq(&self, other: &i32) -> bool {
+impl PartialEq<i16> for GameWeekId {
+    fn eq(&self, other: &i16) -> bool {
         self.0 == *other
     }
 }
 
-impl PartialEq<GameWeekId> for i32 {
+impl PartialEq<GameWeekId> for i16 {
     fn eq(&self, other: &GameWeekId) -> bool {
         *self == other.0
     }

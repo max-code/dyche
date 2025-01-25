@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
-/* Chip - wildcard, freehit, triple cap, assmanm bboost */
+/* Chip - wildcard, freehit, triple cap, assmanm, bboost */
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Chip {
@@ -21,7 +21,12 @@ pub enum Chip {
 pub struct ParseChipError(String);
 
 impl Chip {
-    pub const ALL: [Chip; 3] = [Chip::WildCard, Chip::FreeHit, Chip::TripleCaptain];
+    pub const ALL: [Chip; 4] = [
+        Chip::WildCard,
+        Chip::FreeHit,
+        Chip::TripleCaptain,
+        Chip::BenchBoost,
+    ];
 
     pub fn as_str(&self) -> &'static str {
         match self {

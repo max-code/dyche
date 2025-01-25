@@ -3,7 +3,7 @@ use fpl_api::responses::fixtures::GameweekFixture;
 use fpl_common::types::{ClubId, FixtureId, GameWeekId};
 
 #[derive(Debug, sqlx::FromRow)]
-pub struct FixturesRow {
+pub struct Fixture {
     pub id: FixtureId,
     pub code: i32,
     pub game_week_id: GameWeekId,
@@ -21,7 +21,7 @@ pub struct FixturesRow {
     pub pulse_id: i32,
 }
 
-impl TryFrom<GameweekFixture> for FixturesRow {
+impl TryFrom<GameweekFixture> for Fixture {
     type Error = anyhow::Error;
 
     fn try_from(fixture: GameweekFixture) -> Result<Self, Self::Error> {

@@ -1,6 +1,7 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 
+use super::{string_to_f32, string_to_option_f32};
 use fpl_common::types::{Chip, ClubId, GameWeekId, PlayerId};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -93,36 +94,43 @@ pub struct PlayerOverview {
     pub cost_change_start_fall: i8,
     pub dreamteam_count: u8,
     pub element_type: u8,
-    pub ep_next: String,
-    pub ep_this: String,
+    #[serde(deserialize_with = "string_to_f32")]
+    pub ep_next: f32,
+    #[serde(deserialize_with = "string_to_f32")]
+    pub ep_this: f32,
     pub event_points: i8,
     pub first_name: String,
-    pub form: String,
-    pub id: u16,
+    #[serde(deserialize_with = "string_to_option_f32")]
+    pub form: Option<f32>,
+    pub id: PlayerId,
     pub in_dreamteam: bool,
     pub news: String,
     pub news_added: Option<DateTime<Utc>>,
     pub now_cost: u8,
     pub photo: String,
-    pub points_per_game: String,
+    #[serde(deserialize_with = "string_to_f32")]
+    pub points_per_game: f32,
     pub removed: bool,
     pub second_name: String,
-    pub selected_by_percent: String,
+    #[serde(deserialize_with = "string_to_f32")]
+    pub selected_by_percent: f32,
     pub special: bool,
     pub squad_number: Option<u8>,
     pub status: String,
-    pub team: u8,
+    pub team: ClubId,
     pub team_code: u8,
     pub total_points: u8,
     pub transfers_in: u32,
     pub transfers_in_event: u32,
     pub transfers_out: u32,
     pub transfers_out_event: u32,
-    pub value_form: String,
-    pub value_season: String,
+    #[serde(deserialize_with = "string_to_f32")]
+    pub value_form: f32,
+    #[serde(deserialize_with = "string_to_f32")]
+    pub value_season: f32,
     pub web_name: String,
     pub region: Option<u16>,
-    pub team_join_date: Option<String>,
+    pub team_join_date: Option<NaiveDate>,
     pub minutes: u16,
     pub goals_scored: u8,
     pub assists: u8,
@@ -136,15 +144,23 @@ pub struct PlayerOverview {
     pub saves: u8,
     pub bonus: u8,
     pub bps: i16,
-    pub influence: String,
-    pub creativity: String,
-    pub threat: String,
-    pub ict_index: String,
+    #[serde(deserialize_with = "string_to_f32")]
+    pub influence: f32,
+    #[serde(deserialize_with = "string_to_f32")]
+    pub creativity: f32,
+    #[serde(deserialize_with = "string_to_f32")]
+    pub threat: f32,
+    #[serde(deserialize_with = "string_to_f32")]
+    pub ict_index: f32,
     pub starts: u8,
-    pub expected_goals: String,
-    pub expected_assists: String,
-    pub expected_goal_involvements: String,
-    pub expected_goals_conceded: String,
+    #[serde(deserialize_with = "string_to_f32")]
+    pub expected_goals: f32,
+    #[serde(deserialize_with = "string_to_f32")]
+    pub expected_assists: f32,
+    #[serde(deserialize_with = "string_to_f32")]
+    pub expected_goal_involvements: f32,
+    #[serde(deserialize_with = "string_to_f32")]
+    pub expected_goals_conceded: f32,
     pub influence_rank: u16,
     pub influence_rank_type: u16,
     pub creativity_rank: u16,

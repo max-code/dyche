@@ -30,3 +30,7 @@ Cargo.lock
 
 # Visual Studio Code Rust plugin specific files
 *.rls
+
+.zed/
+
+venv/
