@@ -7,7 +7,7 @@ pub struct TeamResponse {
     pub id: TeamId,
     pub joined_time: DateTime<Utc>,
     pub started_event: GameWeekId,
-    pub favourite_team: ClubId,
+    pub favourite_team: Option<ClubId>,
     pub player_first_name: String,
     pub player_last_name: String,
     pub player_region_id: i16,
@@ -36,4 +36,5 @@ pub struct ClassicLeagues {
 pub struct ClassicLeague {
     pub id: i32,
     pub admin_entry: Option<i32>,
+    pub rank_count: i32,
 }

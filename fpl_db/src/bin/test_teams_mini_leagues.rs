@@ -1,4 +1,4 @@
-use fpl_api::requests::{FplRequest, MiniLeagueRequest, TeamRequest};
+use fpl_api::requests::{MiniLeagueRequest, TeamRequest};
 use fpl_api::FplClient;
 use fpl_common::types::{LeagueId, TeamId};
 use fpl_db::models::{MiniLeague, MiniLeagueStanding, Team};
@@ -40,7 +40,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .leagues
         .classic
         .iter()
-        .filter_map(|league| league.admin_entry.map(|_| LeagueId::new(league.id)))
+        .filter(|league| league.admin_entry.is_some() && league.rank_count <= 100)
+        .map(|league| LeagueId::new(league.id))
         .collect();
 
     // FOR ALL THE LEAGUES THEYRE IN, GET ALL OF THE INFO ABOUT THE LEAGUE

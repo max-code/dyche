@@ -31,7 +31,7 @@ pub async fn upsert_teams(pool: &PgPool, teams: &[Team]) -> Result<(), sqlx::Err
             i32::from(team.id),
             team.joined_time,
             i16::from(team.started_event),
-            i16::from(team.favourite_team),
+            team.favourite_team.map(i16::from),
             team.player_first_name,
             team.player_last_name,
             team.player_region_id,
