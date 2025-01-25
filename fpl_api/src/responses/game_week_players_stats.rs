@@ -1,4 +1,4 @@
-use fpl_common::types::{FixtureId, PlayerId};
+use fpl_common::types::{FixtureId, GameWeekId, PlayerId};
 
 use super::string_to_f32;
 use serde::Deserialize;
@@ -6,6 +6,7 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 pub struct GameWeekPlayersStatsResponse {
     pub elements: Vec<GameWeekPlayer>,
+    pub game_week: Option<GameWeekId>,
 }
 
 #[derive(Debug, Deserialize)]

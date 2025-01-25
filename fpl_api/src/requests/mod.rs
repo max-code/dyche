@@ -1,8 +1,12 @@
 use serde::de::DeserializeOwned;
+use serde_json::Value;
 
 pub trait FplRequest {
     type Response: DeserializeOwned;
     fn to_url(&self, base_url: &str) -> String;
+    fn process_response(&self, response: Value) -> Result<Self::Response, serde_json::Error> {
+        serde_json::from_value(response)
+    }
 }
 
 pub mod fixtures;

@@ -18,4 +18,13 @@ impl FplRequest for GameWeekPlayersStatsRequest {
     fn to_url(&self, base_url: &str) -> String {
         format!("{}/event/{}/live/", base_url, self.game_week)
     }
+
+    fn process_response(
+        &self,
+        response: serde_json::Value,
+    ) -> Result<Self::Response, serde_json::Error> {
+        let mut resp: GameWeekPlayersStatsResponse = serde_json::from_value(response)?;
+        resp.game_week = Some(self.game_week);
+        Ok(resp)
+    }
 }

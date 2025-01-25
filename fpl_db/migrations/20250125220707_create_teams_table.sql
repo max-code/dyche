@@ -1,0 +1,25 @@
+-- Add migration script here
+CREATE TABLE teams (
+    id INTEGER PRIMARY KEY NOT NULL,
+    joined_time TIMESTAMPTZ NOT NULL,
+    started_event SMALLINT NOT NULL REFERENCES game_weeks (id),
+    favourite_team INTEGER NOT NULL REFERENCES clubs (id),
+    player_first_name TEXT NOT NULL,
+    player_last_name TEXT NOT NULL,
+    player_region_id SMALLINT NOT NULL,
+    player_region_name TEXT NOT NULL,
+    player_region_iso_code_short TEXT NOT NULL,
+    player_region_iso_code_long TEXT NOT NULL,
+    summary_overall_points SMALLINT NOT NULL,
+    summary_overall_rank INTEGER NOT NULL,
+    summary_event_points SMALLINT NOT NULL,
+    summary_event_rank INTEGER NOT NULL,
+    current_event SMALLINT NOT NULL,
+    name TEXT NOT NULL,
+    name_change_blocked BOOLEAN NOT NULL,
+    last_deadline_bank SMALLINT NOT NULL,
+    last_deadline_value SMALLINT NOT NULL,
+    last_deadline_total_transfers SMALLINT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW (),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW ()
+);

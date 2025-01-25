@@ -3,6 +3,7 @@ pub mod responses;
 
 use requests::FplRequest;
 use reqwest::Client;
+use serde_json::Value;
 use std::time::Duration;
 
 pub const REQ_TIMEOUT_SECONDS: u64 = 30;
@@ -31,15 +32,14 @@ impl FplClient {
         }
     }
 
-    pub async fn get<T: FplRequest>(&self, request: T) -> Result<T::Response, reqwest::Error> {
+    pub async fn get<T: FplRequest>(
+        &self,
+        request: T,
+    ) -> Result<T::Response, Box<dyn std::error::Error>> {
         let url = request.to_url(&self.base_url);
         println!("Making request with URL: {}", url);
-        self.client
-            .get(&url)
-            .send()
-            .await?
-            .json::<T::Response>()
-            .await
+        let value = self.client.get(&url).send().await?.json::<Value>().await?;
+        Ok(request.process_response(value)?)
     }
 }
 
@@ -69,7 +69,7 @@ mod tests {
     async fn test_team_game_week_request() {
         // Arrange
         let client = FplClient::new();
-        let game_week = GameWeekId::new(22);
+        let game_week = GameWeekId::new(23);
         assert!(game_week.is_ok(), "GameWeek 22 should be valid");
 
         // Act
@@ -126,7 +126,7 @@ mod tests {
     async fn test_game_week_players_stats_request() {
         // Arrange
         let client = FplClient::new();
-        let gw = GameWeekId::new(20);
+        let gw = GameWeekId::new(25);
         assert!(gw.is_ok(), "GameWeek 20 should be valid.");
 
         // Act
