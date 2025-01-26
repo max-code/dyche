@@ -1,5 +1,7 @@
 use sqlx::PgPool;
 
+use fpl_common::types::TeamId;
+
 use crate::models::team::Team;
 
 pub async fn upsert_teams(pool: &PgPool, teams: &[Team]) -> Result<(), sqlx::Error> {
@@ -54,4 +56,15 @@ pub async fn upsert_teams(pool: &PgPool, teams: &[Team]) -> Result<(), sqlx::Err
     }
     tx.commit().await?;
     Ok(())
+}
+
+pub async fn get_all_team_ids(pool: &PgPool) -> Result<Vec<TeamId>, sqlx::Error> {
+    let ids = sqlx::query!("SELECT id FROM teams")
+        .fetch_all(pool)
+        .await?
+        .into_iter()
+        .map(|row| TeamId::from(row.id))
+        .collect();
+
+    Ok(ids)
 }

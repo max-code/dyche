@@ -1,9 +1,10 @@
-use fpl_api::requests::{GameStateRequest, PlayerRequest};
+use fpl_api::requests::TeamGameWeekRequest;
 use fpl_api::FplClient;
-use fpl_common::types::PlayerId;
-use fpl_db::models::{Player, PlayerFixtureDb, PlayerHistoryDb, PlayerHistoryPastDb};
-use fpl_db::queries::player::{
-    upsert_player_fixtures, upsert_player_histories, upsert_player_history_past, upsert_players,
+use fpl_common::types::{GameWeekId, TeamId};
+use fpl_db::models::{TeamGameWeek, TeamGameWeekAutomaticSub, TeamGameWeekPick};
+use fpl_db::queries::team::get_all_team_ids;
+use fpl_db::queries::team_game_week::{
+    upsert_team_game_week, upsert_team_game_week_automatic_subs, upsert_team_game_week_picks,
 };
 use sqlx::PgPool;
 use std::time::Instant;
@@ -15,28 +16,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pool = PgPool::connect(&database_url).await?;
     let client = FplClient::new();
 
-    // Get game state and insert players
-    let game_state = client.get(GameStateRequest::new()).await?;
-    let players: Vec<Player> = game_state
-        .elements
-        .iter()
-        .map(TryInto::try_into)
-        .collect::<Result<_, _>>()?;
-    upsert_players(&pool, &players).await?;
+    let ids = get_all_team_ids(&pool).await?;
 
-    // Process players concurrently in chunks
-    let player_chunks: Vec<_> = players
-        .iter()
-        .map(|p| p.id)
-        .collect::<Vec<_>>()
+    let mut team_game_week_requests = vec![];
+    for team_id in ids {
+        for game_week_id in GameWeekId::weeks_range_iter(1, 23) {
+            team_game_week_requests.push((team_id, game_week_id));
+        }
+    }
+    let team_game_week_chunks: Vec<_> = team_game_week_requests
         .chunks(10)
         .map(|c| c.to_vec())
         .collect();
 
-    for chunk in player_chunks {
+    for chunk in team_game_week_chunks {
         let futures: Vec<_> = chunk
             .into_iter()
-            .map(|player_id| process_player(pool.clone(), client.clone(), player_id))
+            .map(|team_gw_pair| process_team_game_week(pool.clone(), client.clone(), team_gw_pair))
             .collect();
         futures::future::join_all(futures).await;
     }
@@ -45,36 +41,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn process_player(
+async fn process_team_game_week(
     pool: PgPool,
     client: FplClient,
-    player_id: PlayerId,
+    (team_id, game_week_id): (TeamId, GameWeekId),
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let player = client.get(PlayerRequest::new(player_id)).await?;
+    println!("Making request for Team ID {team_id}, GW {game_week_id}");
+    let team_game_week_response = client
+        .get(TeamGameWeekRequest::new(team_id, game_week_id))
+        .await?;
 
-    // Process fixtures
-    let fixtures: Vec<PlayerFixtureDb> = player
-        .fixtures
-        .iter()
-        .map(|f| (player_id, f).try_into())
-        .collect::<Result<_, _>>()?;
-    upsert_player_fixtures(&pool, &fixtures).await?;
+    // Process tgw
+    let team_game_week: TeamGameWeek = (team_id, game_week_id, &team_game_week_response).into();
+    upsert_team_game_week(&pool, &team_game_week).await?;
 
-    // Process history
-    let history: Vec<PlayerHistoryDb> = player
-        .history
+    // Process tgw picks
+    let team_game_week_picks: Vec<TeamGameWeekPick> = team_game_week_response
+        .picks
         .iter()
-        .map(TryInto::try_into)
-        .collect::<Result<_, _>>()?;
-    upsert_player_histories(&pool, &history).await?;
+        .map(|pick| (team_id, game_week_id, pick).into())
+        .collect();
+    upsert_team_game_week_picks(&pool, &team_game_week_picks).await?;
 
-    // Process history past
-    let history_past: Vec<PlayerHistoryPastDb> = player
-        .history_past
+    // Process tgw auto subs
+    let team_game_week_auto_subs: Vec<TeamGameWeekAutomaticSub> = team_game_week_response
+        .automatic_subs
         .iter()
-        .map(|f| (player_id, f).try_into())
-        .collect::<Result<_, _>>()?;
-    upsert_player_history_past(&pool, &history_past).await?;
+        .map(|auto_sub| auto_sub.into())
+        .collect();
+    upsert_team_game_week_automatic_subs(&pool, &team_game_week_auto_subs).await?;
 
     Ok(())
 }

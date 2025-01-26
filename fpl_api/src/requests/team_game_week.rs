@@ -2,6 +2,7 @@ use super::FplRequest;
 use crate::responses::team_game_week::TeamGameWeekResponse;
 use fpl_common::types::{GameWeekId, TeamId};
 
+#[derive(Clone)]
 pub struct TeamGameWeekRequest {
     pub team_id: TeamId,
     pub game_week: GameWeekId,

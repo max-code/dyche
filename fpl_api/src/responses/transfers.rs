@@ -8,8 +8,8 @@ pub type TransfersResponse = Vec<TransferResponse>;
 pub struct TransferResponse {
     pub element_in: PlayerId,
     pub element_out: PlayerId,
-    pub element_in_cost: u8,
-    pub element_out_cost: u8,
+    pub element_in_cost: i16,
+    pub element_out_cost: i16,
     pub entry: TeamId,
     pub event: GameWeekId,
     pub time: DateTime<Utc>,
