@@ -5,6 +5,7 @@ use crate::scraper::{Scraper, ScraperOrder, ShouldScrape};
 use crate::NoScrapeReason;
 use async_trait::async_trait;
 use sqlx::PgPool;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info};
 
@@ -15,14 +16,14 @@ use fpl_db::models::Fixture;
 use fpl_db::queries::fixture::upsert_fixtures;
 
 pub struct FixturesScraper {
-    pool: PgPool,
-    client: FplClient,
+    pool: Arc<PgPool>,
+    client: Arc<FplClient>,
     min_scrape_interval: Duration,
     last_scrape: RwLock<Option<SystemTime>>,
 }
 
 impl FixturesScraper {
-    pub fn new(pool: PgPool, client: FplClient, min_scrape_interval: Duration) -> Self {
+    pub fn new(pool: Arc<PgPool>, client: Arc<FplClient>, min_scrape_interval: Duration) -> Self {
         info!("Creating FixtureScraper");
         Self {
             pool,
@@ -58,7 +59,7 @@ impl Scraper for FixturesScraper {
             }
         }
 
-        info!("Should Scrape Result: {:?}", result);
+        info!("[{}] Should Scrape Result: {:?}", self.name(), result);
         result
     }
 
@@ -73,7 +74,8 @@ impl Scraper for FixturesScraper {
         let fixtures_rows: Vec<Fixture> = fixtures.iter().map(|f| f.into()).collect();
 
         debug!(
-            "Got {} fixtures from the API. Converted to {} Fixture rows for upsertion.",
+            "[{}] Got {} fixtures from the API. Converted to {} Fixture rows for upsertion.",
+            self.name(),
             fixtures.len(),
             fixtures_rows.len()
         );

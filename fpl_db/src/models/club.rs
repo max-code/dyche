@@ -26,30 +26,30 @@ pub struct Club {
     pub pulse_id: i16,
 }
 
-impl From<ClubOverview> for Club {
-    fn from(club: ClubOverview) -> Self {
+impl From<&ClubOverview> for Club {
+    fn from(club: &ClubOverview) -> Self {
         Self {
             id: club.id,
-            code: club.code as i16,
-            draw: club.draw as i16,
-            form: club.form,
-            loss: club.loss as i16,
-            name: club.name,
-            played: club.played as i16,
-            points: club.points as i16,
-            position: club.position as i16,
-            short_name: club.short_name,
-            strength: club.strength as i16,
-            team_division: club.team_division,
+            code: club.code,
+            draw: club.draw,
+            form: club.form.clone(),
+            loss: club.loss,
+            name: club.name.clone(),
+            played: club.played,
+            points: club.points,
+            position: club.position,
+            short_name: club.short_name.clone(),
+            strength: club.strength,
+            team_division: club.team_division.clone(),
             unavailable: club.unavailable,
-            win: club.win as i16,
-            strength_overall_home: club.strength_overall_home as i16,
-            strength_overall_away: club.strength_overall_away as i16,
-            strength_attack_home: club.strength_attack_home as i16,
-            strength_attack_away: club.strength_attack_away as i16,
-            strength_defence_home: club.strength_defence_home as i16,
-            strength_defence_away: club.strength_defence_away as i16,
-            pulse_id: club.pulse_id as i16,
+            win: club.win,
+            strength_overall_home: club.strength_overall_home,
+            strength_overall_away: club.strength_overall_away,
+            strength_attack_home: club.strength_attack_home,
+            strength_attack_away: club.strength_attack_away,
+            strength_defence_home: club.strength_defence_home,
+            strength_defence_away: club.strength_defence_away,
+            pulse_id: club.pulse_id,
         }
     }
 }

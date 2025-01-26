@@ -95,8 +95,12 @@ impl ScraperManager {
 
     async fn process_all_scrapers(&self) -> ScraperResult {
         for order in ScraperOrder::iter() {
-            debug!("Processing scrapers for order {:?}", order);
             if let Some(scrapers) = self.scrapers.get(&order) {
+                info!(
+                    "PROCESSING {} SCRAPERS WITH ORDER {:?}",
+                    scrapers.len(),
+                    order
+                );
                 let scraper_futures: Vec<_> = scrapers
                     .iter()
                     .map(|scraper| self.handle_scraper(scraper, order))
@@ -146,7 +150,7 @@ impl ScraperManager {
         scraper: &Box<dyn Scraper>,
         order: ScraperOrder,
     ) -> Result<(), ScraperError> {
-        info!("Running scraper {}of order {:?}", scraper.name(), order);
+        info!("Running scraper {} of order {:?}", scraper.name(), order);
         scraper.scrape().await
     }
 
