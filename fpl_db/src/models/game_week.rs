@@ -46,11 +46,9 @@ pub struct GameWeekTopElement {
     pub points: i16,
 }
 
-impl TryFrom<&GameWeekOverview> for GameWeek {
-    type Error = anyhow::Error;
-
-    fn try_from(gw: &GameWeekOverview) -> Result<Self, Self::Error> {
-        Ok(Self {
+impl From<&GameWeekOverview> for GameWeek {
+    fn from(gw: &GameWeekOverview) -> Self {
+        Self {
             id: gw.id,
             name: gw.name.clone(),
             deadline_time: gw.deadline_time,
@@ -77,7 +75,7 @@ impl TryFrom<&GameWeekOverview> for GameWeek {
             top_element: gw.top_element,
             most_captained: gw.most_captained,
             most_vice_captained: gw.most_vice_captained,
-        })
+        }
     }
 }
 

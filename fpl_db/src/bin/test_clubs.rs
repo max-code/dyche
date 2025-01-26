@@ -27,7 +27,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let clubs = game_state.teams;
 
     let conversion_start = Instant::now();
-    let clubs_rows: Vec<Club> = clubs.into_iter().map(|f| f.try_into().unwrap()).collect();
+    let clubs_rows: Vec<Club> = clubs.into_iter().map(|f| f.into()).collect();
     println!("Conversion took: {:?}", conversion_start.elapsed());
 
     let upsert_start = Instant::now();

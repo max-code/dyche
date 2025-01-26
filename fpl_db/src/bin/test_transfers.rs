@@ -16,7 +16,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let ids = get_all_team_ids(&pool).await?;
 
-    let team_game_week_chunks: Vec<_> = ids.chunks(10).map(|c| c.to_vec()).collect();
+    let team_game_week_chunks: Vec<_> = ids.chunks(100).map(|c| c.to_vec()).collect();
 
     for chunk in team_game_week_chunks {
         let futures: Vec<_> = chunk

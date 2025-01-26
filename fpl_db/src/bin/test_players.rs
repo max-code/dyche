@@ -17,11 +17,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Get game state and insert players
     let game_state = client.get(GameStateRequest::new()).await?;
-    let players: Vec<Player> = game_state
-        .elements
-        .iter()
-        .map(TryInto::try_into)
-        .collect::<Result<_, _>>()?;
+    let players: Vec<Player> = game_state.elements.iter().map(|gs| gs.into()).collect();
     upsert_players(&pool, &players).await?;
 
     // Process players concurrently in chunks
@@ -29,7 +25,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .iter()
         .map(|p| p.id)
         .collect::<Vec<_>>()
-        .chunks(10)
+        .chunks(100)
         .map(|c| c.to_vec())
         .collect();
 
@@ -56,24 +52,20 @@ async fn process_player(
     let fixtures: Vec<PlayerFixtureDb> = player
         .fixtures
         .iter()
-        .map(|f| (player_id, f).try_into())
-        .collect::<Result<_, _>>()?;
+        .map(|f| (player_id, f).into())
+        .collect();
     upsert_player_fixtures(&pool, &fixtures).await?;
 
     // Process history
-    let history: Vec<PlayerHistoryDb> = player
-        .history
-        .iter()
-        .map(TryInto::try_into)
-        .collect::<Result<_, _>>()?;
+    let history: Vec<PlayerHistoryDb> = player.history.iter().map(|h| h.into()).collect();
     upsert_player_histories(&pool, &history).await?;
 
     // Process history past
     let history_past: Vec<PlayerHistoryPastDb> = player
         .history_past
         .iter()
-        .map(|f| (player_id, f).try_into())
-        .collect::<Result<_, _>>()?;
+        .map(|f| (player_id, f).into())
+        .collect();
     upsert_player_history_past(&pool, &history_past).await?;
 
     Ok(())

@@ -30,7 +30,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Team API request took: {:?}", api_start.elapsed());
 
     let conversion_start = Instant::now();
-    let team_row: Team = (&team_response).try_into().unwrap();
+    let team_row: Team = (&team_response).into();
     println!("Team Conversion took: {:?}", conversion_start.elapsed());
 
     let mut teams = vec![team_row];
@@ -57,16 +57,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("ML API request took: {:?}", api_start.elapsed());
 
         let conversion_start = Instant::now();
-        let mini_league_row: MiniLeague = (&mini_league_response).try_into().unwrap();
+        let mini_league_row: MiniLeague = (&mini_league_response).into();
         println!("ML Conversion took: {:?}", conversion_start.elapsed());
 
         mini_leagues.push(mini_league_row);
 
         for standing in mini_league_response.standings.results.iter() {
             let mini_league_standing: MiniLeagueStanding =
-                (&mini_league_response.league.id, standing)
-                    .try_into()
-                    .unwrap();
+                (&mini_league_response.league.id, standing).into();
             mini_league_standings.push(mini_league_standing);
         }
     }
@@ -86,7 +84,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Team API request took: {:?}", api_start.elapsed());
 
         let conversion_start = Instant::now();
-        let team_row: Team = (&team_response).try_into().unwrap();
+        let team_row: Team = (&team_response).into();
         println!("Team Conversion took: {:?}", conversion_start.elapsed());
 
         teams.push(team_row);

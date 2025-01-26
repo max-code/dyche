@@ -26,10 +26,9 @@ pub struct Club {
     pub pulse_id: i16,
 }
 
-impl TryFrom<ClubOverview> for Club {
-    type Error = anyhow::Error;
-    fn try_from(club: ClubOverview) -> Result<Self, Self::Error> {
-        Ok(Self {
+impl From<ClubOverview> for Club {
+    fn from(club: ClubOverview) -> Self {
+        Self {
             id: club.id,
             code: club.code as i16,
             draw: club.draw as i16,
@@ -51,6 +50,6 @@ impl TryFrom<ClubOverview> for Club {
             strength_defence_home: club.strength_defence_home as i16,
             strength_defence_away: club.strength_defence_away as i16,
             pulse_id: club.pulse_id as i16,
-        })
+        }
     }
 }

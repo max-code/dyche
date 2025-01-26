@@ -31,7 +31,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let game_week_players: Vec<GameWeekPlayerDb> = game_week_players
             .elements
             .into_iter()
-            .map(|game_week_player| (game_week, game_week_player).try_into().unwrap())
+            .map(|game_week_player| (game_week, game_week_player).into())
             .collect();
         println!("Conversion {idx} took: {:?}", conversion_start.elapsed());
 

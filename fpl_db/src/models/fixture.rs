@@ -21,11 +21,9 @@ pub struct Fixture {
     pub pulse_id: i32,
 }
 
-impl TryFrom<GameweekFixture> for Fixture {
-    type Error = anyhow::Error;
-
-    fn try_from(fixture: GameweekFixture) -> Result<Self, Self::Error> {
-        Ok(Self {
+impl From<GameweekFixture> for Fixture {
+    fn from(fixture: GameweekFixture) -> Self {
+        Self {
             id: fixture.common.id,
             code: fixture.common.code as i32,
             game_week_id: fixture.common.event,
@@ -41,6 +39,6 @@ impl TryFrom<GameweekFixture> for Fixture {
             team_h_difficulty: fixture.team_h_difficulty as i16,
             team_a_difficulty: fixture.team_a_difficulty as i16,
             pulse_id: fixture.pulse_id as i32,
-        })
+        }
     }
 }

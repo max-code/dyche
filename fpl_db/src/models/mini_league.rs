@@ -35,10 +35,9 @@ pub struct MiniLeagueStanding {
     pub league_id: LeagueId,
 }
 
-impl TryFrom<&MiniLeagueResponse> for MiniLeague {
-    type Error = anyhow::Error;
-    fn try_from(mini_league: &MiniLeagueResponse) -> Result<Self, Self::Error> {
-        Ok(Self {
+impl From<&MiniLeagueResponse> for MiniLeague {
+    fn from(mini_league: &MiniLeagueResponse) -> Self {
+        Self {
             id: mini_league.league.id,
             last_updated_data: mini_league.last_updated_data,
             name: mini_league.league.name.clone(),
@@ -53,14 +52,13 @@ impl TryFrom<&MiniLeagueResponse> for MiniLeague {
             has_cup: mini_league.league.has_cup,
             cup_league: mini_league.league.cup_league,
             rank: mini_league.league.rank,
-        })
+        }
     }
 }
 
-impl TryFrom<(&LeagueId, &Standing)> for MiniLeagueStanding {
-    type Error = anyhow::Error;
-    fn try_from((league_id, standing): (&LeagueId, &Standing)) -> Result<Self, Self::Error> {
-        Ok(Self {
+impl From<(&LeagueId, &Standing)> for MiniLeagueStanding {
+    fn from((league_id, standing): (&LeagueId, &Standing)) -> Self {
+        Self {
             id: standing.id,
             event_total: standing.event_total,
             player_name: standing.player_name.clone(),
@@ -72,6 +70,6 @@ impl TryFrom<(&LeagueId, &Standing)> for MiniLeagueStanding {
             entry_name: standing.entry_name.clone(),
             has_player: standing.has_played,
             league_id: league_id.clone(),
-        })
+        }
     }
 }

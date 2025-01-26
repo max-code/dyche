@@ -31,12 +31,10 @@ pub struct GameWeekPlayerDb {
     pub in_dreamteam: bool,
 }
 
-impl TryFrom<(GameWeekId, GameWeekPlayer)> for GameWeekPlayerDb {
-    type Error = anyhow::Error;
-
-    fn try_from((game_week_id, player): (GameWeekId, GameWeekPlayer)) -> Result<Self, Self::Error> {
+impl From<(GameWeekId, GameWeekPlayer)> for GameWeekPlayerDb {
+    fn from((game_week_id, player): (GameWeekId, GameWeekPlayer)) -> Self {
         let stats = player.stats;
-        Ok(Self {
+        Self {
             player_id: player.id,
             game_week_id,
             minutes: stats.minutes as i16,
@@ -63,6 +61,6 @@ impl TryFrom<(GameWeekId, GameWeekPlayer)> for GameWeekPlayerDb {
             expected_goals_conceded: stats.expected_goals_conceded,
             total_points: stats.total_points as i16,
             in_dreamteam: stats.in_dreamteam,
-        })
+        }
     }
 }

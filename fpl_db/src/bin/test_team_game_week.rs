@@ -25,7 +25,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     let team_game_week_chunks: Vec<_> = team_game_week_requests
-        .chunks(10)
+        .chunks(100)
         .map(|c| c.to_vec())
         .collect();
 

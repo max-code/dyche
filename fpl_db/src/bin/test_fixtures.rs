@@ -25,10 +25,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("API request took: {:?}", api_start.elapsed());
 
     let conversion_start = Instant::now();
-    let fixtures_rows: Vec<Fixture> = fixtures
-        .into_iter()
-        .map(|f| f.try_into().unwrap())
-        .collect();
+    let fixtures_rows: Vec<Fixture> = fixtures.into_iter().map(|f| f.into()).collect();
     println!("Conversion took: {:?}", conversion_start.elapsed());
 
     let upsert_start = Instant::now();

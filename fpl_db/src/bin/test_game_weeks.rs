@@ -32,7 +32,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     GAME WEEKS
      */
     let conversion_1_start = Instant::now();
-    let game_weeks_rows: Vec<GameWeek> = gameweeks.iter().map(|f| f.try_into().unwrap()).collect();
+    let game_weeks_rows: Vec<GameWeek> = gameweeks.iter().map(|f| f.into()).collect();
     println!(
         "Conversion to GameWeek took: {:?}",
         conversion_1_start.elapsed()

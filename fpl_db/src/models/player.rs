@@ -100,10 +100,9 @@ pub struct Player {
     pub clean_sheets_per_90: f32,
 }
 
-impl TryFrom<&PlayerOverview> for Player {
-    type Error = anyhow::Error;
-    fn try_from(player: &PlayerOverview) -> Result<Self, Self::Error> {
-        Ok(Self {
+impl From<&PlayerOverview> for Player {
+    fn from(player: &PlayerOverview) -> Self {
+        Self {
             id: player.id,
             can_transact: player.can_transact,
             can_select: player.can_select,
@@ -199,7 +198,7 @@ impl TryFrom<&PlayerOverview> for Player {
             selected_rank_type: player.selected_rank_type as i16,
             starts_per_90: player.starts_per_90,
             clean_sheets_per_90: player.clean_sheets_per_90,
-        })
+        }
     }
 }
 
@@ -212,18 +211,15 @@ pub struct PlayerFixtureDb {
     pub difficulty: i16,
 }
 
-impl TryFrom<(PlayerId, &PlayerFixture)> for PlayerFixtureDb {
-    type Error = anyhow::Error;
-    fn try_from(
-        (player_id, player_fixture): (PlayerId, &PlayerFixture),
-    ) -> Result<Self, Self::Error> {
-        Ok(Self {
+impl From<(PlayerId, &PlayerFixture)> for PlayerFixtureDb {
+    fn from((player_id, player_fixture): (PlayerId, &PlayerFixture)) -> Self {
+        Self {
             player_id,
             fixture_id: player_fixture.common.id,
             event_name: player_fixture.event_name.clone(),
             is_home: player_fixture.is_home,
             difficulty: player_fixture.difficulty,
-        })
+        }
     }
 }
 
@@ -259,10 +255,9 @@ pub struct PlayerHistoryPastDb {
     pub expected_goals_conceded: f32,
 }
 
-impl TryFrom<(PlayerId, &PlayerHistoryPast)> for PlayerHistoryPastDb {
-    type Error = anyhow::Error;
-    fn try_from((player_id, past): (PlayerId, &PlayerHistoryPast)) -> Result<Self, Self::Error> {
-        Ok(Self {
+impl From<(PlayerId, &PlayerHistoryPast)> for PlayerHistoryPastDb {
+    fn from((player_id, past): (PlayerId, &PlayerHistoryPast)) -> Self {
+        Self {
             player_id,
             season_name: past.season_name.clone(),
             element_code: past.element_code,
@@ -291,7 +286,7 @@ impl TryFrom<(PlayerId, &PlayerHistoryPast)> for PlayerHistoryPastDb {
             expected_assists: past.expected_assists,
             expected_goal_involvements: past.expected_goal_involvements,
             expected_goals_conceded: past.expected_goals_conceded,
-        })
+        }
     }
 }
 
@@ -335,10 +330,9 @@ pub struct PlayerHistoryDb {
     pub transfers_out: i32,
 }
 
-impl TryFrom<&PlayerHistory> for PlayerHistoryDb {
-    type Error = anyhow::Error;
-    fn try_from(history: &PlayerHistory) -> Result<Self, Self::Error> {
-        Ok(Self {
+impl From<&PlayerHistory> for PlayerHistoryDb {
+    fn from(history: &PlayerHistory) -> Self {
+        Self {
             player_id: history.element,
             fixture_id: history.fixture,
             opponent_team: history.opponent_team,
@@ -375,6 +369,6 @@ impl TryFrom<&PlayerHistory> for PlayerHistoryDb {
             selected: history.selected,
             transfers_in: history.transfers_in,
             transfers_out: history.transfers_out,
-        })
+        }
     }
 }
