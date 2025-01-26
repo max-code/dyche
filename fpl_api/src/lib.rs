@@ -5,9 +5,38 @@ use requests::FplRequest;
 use reqwest::Client;
 use serde_json::Value;
 use std::time::Duration;
+use thiserror::Error;
 use tracing::info;
 
 pub const REQ_TIMEOUT_SECONDS: u64 = 30;
+
+#[derive(Error, Debug)]
+pub enum FplClientError {
+    #[error("HTTP {status} from {url}: {message}")]
+    RequestError {
+        status: reqwest::StatusCode,
+        url: String,
+        message: String,
+    },
+    #[error("JSON parsing error (status: {1}): {0}")]
+    JsonError(serde_json::Error, reqwest::StatusCode),
+}
+
+impl From<(serde_json::Error, reqwest::StatusCode)> for FplClientError {
+    fn from((error, status): (serde_json::Error, reqwest::StatusCode)) -> Self {
+        Self::JsonError(error, status)
+    }
+}
+
+impl From<reqwest::Error> for FplClientError {
+    fn from(e: reqwest::Error) -> Self {
+        Self::RequestError {
+            status: e.status().unwrap_or_default(),
+            url: e.url().map_or("unknown".to_string(), |u| u.to_string()),
+            message: e.to_string(),
+        }
+    }
+}
 
 #[derive(Clone)]
 pub struct FplClient {
@@ -34,14 +63,19 @@ impl FplClient {
         }
     }
 
-    pub async fn get<T: FplRequest>(
+    pub async fn get<T: FplRequest + std::fmt::Debug>(
         &self,
         request: T,
-    ) -> Result<T::Response, Box<dyn std::error::Error>> {
+    ) -> Result<T::Response, FplClientError> {
         let url = request.to_url(&self.base_url);
-        info!("Making request with URL: {}", url);
-        let value = self.client.get(&url).send().await?.json::<Value>().await?;
-        Ok(request.process_response(value)?)
+        info!("Making {:?} with URL {}", request, url);
+        let response = self.client.get(&url).send().await?;
+        let status = response.status();
+        let body = response.text().await?;
+        let value: Value = serde_json::from_str(&body).map_err(|e| (e, status))?;
+        request
+            .process_response(value)
+            .map_err(|e| (e, status).into())
     }
 }
 

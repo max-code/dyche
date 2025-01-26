@@ -4,7 +4,6 @@ use fpl_db::models::fixture::Fixture;
 use fpl_db::queries::fixture::upsert_fixtures;
 use sqlx::PgPool;
 use std::time::Instant;
-use tracing::{debug, info};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

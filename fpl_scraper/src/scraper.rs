@@ -4,7 +4,7 @@ use crate::error::ScraperError;
 use async_trait::async_trait;
 use strum::{EnumIter, IntoEnumIterator};
 use tokio::time;
-use tracing::{debug, error, info, instrument, trace};
+use tracing::{debug, error, info, instrument, trace, warn};
 
 #[derive(Debug, Eq, PartialEq, Hash, Clone, Copy, PartialOrd, Ord, EnumIter)]
 pub enum ScraperOrder {
@@ -20,16 +20,16 @@ pub enum ShouldScrape {
 }
 
 #[derive(Debug)]
-enum NoScrapeReason {
-    TimeIntervalNotLapsed(u16),
+pub enum NoScrapeReason {
+    TimeIntervalNotLapsed(Duration, u64),
 }
 
 impl NoScrapeReason {
     fn message(&self) -> String {
         match self {
-            Self::TimeIntervalNotLapsed(mins) => format!(
-                "Minimum time interval ({} minutes) between scrapes not exceeded.",
-                mins
+            Self::TimeIntervalNotLapsed(interval, seconds) => format!(
+                "Minimum time interval ({:?}) between scrapes not exceeded. {} seconds remaining.",
+                interval, seconds
             ),
         }
     }
@@ -38,7 +38,7 @@ impl NoScrapeReason {
 #[async_trait]
 pub trait Scraper: Send + Sync {
     fn name(&self) -> &'static str;
-    fn should_scrape(&self) -> ShouldScrape;
+    async fn should_scrape(&self) -> ShouldScrape;
     async fn scrape(&self) -> Result<(), ScraperError>;
     fn position(&self) -> ScraperOrder;
 }
@@ -46,6 +46,7 @@ pub trait Scraper: Send + Sync {
 pub struct ScraperManager {
     scrapers: HashMap<ScraperOrder, Vec<Box<dyn Scraper>>>,
 }
+type ScraperResult = Result<(), Vec<(usize, ScraperError)>>;
 
 impl ScraperManager {
     #[instrument]
@@ -79,56 +80,80 @@ impl ScraperManager {
         let mut interval = time::interval(Duration::from_secs(10));
         loop {
             interval.tick().await;
-            trace!("Tick");
-            self.process_all_orders().await;
-        }
-    }
-
-    async fn process_all_orders(&self) {
-        for order in ScraperOrder::iter() {
-            debug!("Processing scrapers for order {:?}", order);
-            if let Some(scrapers) = self.scrapers.get(&order) {
-                self.process_scrapers(scrapers, order).await;
+            trace!("Scrapers Tick");
+            match self.process_all_scrapers().await {
+                Ok(_) => debug!("All scrapers completed successfully"),
+                Err(errors) => {
+                    error!(
+                        "Failed to process scrapers. {} errors occurred",
+                        errors.len()
+                    );
+                }
             }
         }
     }
 
-    async fn process_scrapers(&self, scrapers: &[Box<dyn Scraper>], order: ScraperOrder) {
-        for (idx, scraper) in scrapers.iter().enumerate() {
-            debug!("Checking scraper {} of order {:?}", idx, order);
-            self.handle_scraper(scraper, idx, order).await;
+    async fn process_all_scrapers(&self) -> ScraperResult {
+        for order in ScraperOrder::iter() {
+            debug!("Processing scrapers for order {:?}", order);
+            if let Some(scrapers) = self.scrapers.get(&order) {
+                let scraper_futures: Vec<_> = scrapers
+                    .iter()
+                    .map(|scraper| self.handle_scraper(scraper, order))
+                    .collect();
+
+                let results = futures::future::join_all(scraper_futures).await;
+
+                // Collect errors from this bucket
+                let errors: Vec<_> = results
+                    .into_iter()
+                    .enumerate()
+                    .filter_map(|(idx, res)| res.err().map(|e| (idx, e)))
+                    .collect();
+
+                if !errors.is_empty() {
+                    for (idx, error) in &errors {
+                        let scraper_name =
+                            scrapers.get(*idx).map(|s| s.name()).unwrap_or_else(|| {
+                                warn!("Scraper index {} not found", idx);
+                                "Unknown scraper"
+                            });
+                        error!("Scraper {scraper_name} failed:\n\n\tError: {error}\n");
+                    }
+                    return Err(errors);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    async fn handle_scraper(
+        &self,
+        scraper: &Box<dyn Scraper>,
+        order: ScraperOrder,
+    ) -> Result<(), ScraperError> {
+        match scraper.should_scrape().await {
+            ShouldScrape::Yes => self.run_scraper(scraper, order).await,
+            ShouldScrape::No(reason) => {
+                self.log_skip(scraper, reason);
+                Ok(())
+            }
         }
     }
 
-    async fn handle_scraper(&self, scraper: &Box<dyn Scraper>, idx: usize, order: ScraperOrder) {
-        match scraper.should_scrape() {
-            ShouldScrape::Yes => self.run_scraper(scraper, idx, order).await,
-            ShouldScrape::No(reason) => self.log_skip(scraper, idx, reason),
-        }
+    async fn run_scraper(
+        &self,
+        scraper: &Box<dyn Scraper>,
+        order: ScraperOrder,
+    ) -> Result<(), ScraperError> {
+        info!("Running scraper {}of order {:?}", scraper.name(), order);
+        scraper.scrape().await
     }
 
-    async fn run_scraper(&self, scraper: &Box<dyn Scraper>, idx: usize, order: ScraperOrder) {
+    fn log_skip(&self, scraper: &Box<dyn Scraper>, reason: NoScrapeReason) {
         info!(
-            "Running scraper {} (idx {}) of order {:?}",
+            "Not running scraper {} with reason: {}",
             scraper.name(),
-            idx,
-            order
-        );
-        match scraper.scrape().await {
-            Ok(_) => info!(
-                "Scraper {} (idx {}) completed successfully",
-                scraper.name(),
-                idx
-            ),
-            Err(e) => error!("Scraper {} (idx {}) failed: {}", scraper.name(), idx, e),
-        }
-    }
-
-    fn log_skip(&self, scraper: &Box<dyn Scraper>, idx: usize, reason: NoScrapeReason) {
-        debug!(
-            "Not running scraper {} (idx {}) with reason: {}",
-            scraper.name(),
-            idx,
             reason.message()
         );
     }

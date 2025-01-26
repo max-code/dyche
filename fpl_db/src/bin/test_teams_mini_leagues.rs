@@ -7,7 +7,6 @@ use fpl_db::queries::team::upsert_teams;
 use sqlx::PgPool;
 use std::collections::HashSet;
 use std::time::Instant;
-use tracing::{debug, info};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

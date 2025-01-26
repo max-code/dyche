@@ -2,6 +2,7 @@ use super::FplRequest;
 use crate::responses::game_week_players_stats::GameWeekPlayersStatsResponse;
 use fpl_common::types::GameWeekId;
 
+#[derive(Debug)]
 pub struct GameWeekPlayersStatsRequest {
     pub game_week: GameWeekId,
 }

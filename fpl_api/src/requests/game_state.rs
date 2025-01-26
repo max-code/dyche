@@ -1,6 +1,7 @@
 use super::FplRequest;
 use crate::responses::game_state::GameStateResponse;
 
+#[derive(Debug)]
 pub struct GameStateRequest {}
 
 impl GameStateRequest {

@@ -22,3 +22,4 @@ tokio = { version = "1", features = ["full"] }
 dotenv = { workspace = true }
 strum = { version = "0.26.3", features = ["derive"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+futures = { workspace = true }

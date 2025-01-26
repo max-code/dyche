@@ -2,6 +2,7 @@ use super::FplRequest;
 use crate::responses::transfers::TransfersResponse;
 use fpl_common::types::TeamId;
 
+#[derive(Debug)]
 pub struct TransfersRequest {
     team_id: TeamId,
 }

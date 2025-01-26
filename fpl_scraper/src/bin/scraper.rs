@@ -1,8 +1,9 @@
+use std::time::Duration;
+
 use fpl_api::FplClient;
 use fpl_scraper::{FixturesScraper, ScraperManager, ScraperOrder};
 use sqlx::PgPool;
 use tracing::info;
-use tracing::{debug, info};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -20,7 +21,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut manager = ScraperManager::new();
 
-    let fixtures_scraper = FixturesScraper::new(pool, client);
+    let fixtures_scraper = FixturesScraper::new(pool, client, Duration::from_secs(300));
     manager.register_scraper(ScraperOrder::First, fixtures_scraper);
 
     manager.run().await;

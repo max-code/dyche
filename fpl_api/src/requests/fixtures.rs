@@ -1,6 +1,7 @@
 use super::FplRequest;
 use crate::responses::fixtures::FixturesResponse;
 
+#[derive(Debug)]
 pub struct FixtureRequest {}
 
 impl Default for FixtureRequest {

@@ -2,6 +2,7 @@ use super::FplRequest;
 use crate::responses::mini_league::MiniLeagueResponse;
 use fpl_common::types::LeagueId;
 
+#[derive(Debug)]
 pub struct MiniLeagueRequest {
     pub league_id: LeagueId,
 }

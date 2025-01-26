@@ -4,7 +4,6 @@ use fpl_db::models::Club;
 use fpl_db::queries::club::upsert_clubs;
 use sqlx::PgPool;
 use std::time::Instant;
-use tracing::{debug, info};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

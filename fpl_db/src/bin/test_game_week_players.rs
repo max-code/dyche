@@ -5,7 +5,6 @@ use fpl_db::models::GameWeekPlayerDb;
 use fpl_db::queries::game_week_player::upsert_game_week_players;
 use sqlx::PgPool;
 use std::time::Instant;
-use tracing::{debug, info};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

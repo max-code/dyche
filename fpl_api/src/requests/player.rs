@@ -2,6 +2,7 @@ use super::FplRequest;
 use crate::responses::player::PlayerResponse;
 use fpl_common::types::PlayerId;
 
+#[derive(Debug)]
 pub struct PlayerRequest {
     pub player_id: PlayerId,
 }
