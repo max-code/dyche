@@ -21,24 +21,24 @@ pub struct Fixture {
     pub pulse_id: i32,
 }
 
-impl From<GameweekFixture> for Fixture {
-    fn from(fixture: GameweekFixture) -> Self {
+impl From<&GameweekFixture> for Fixture {
+    fn from(fixture: &GameweekFixture) -> Self {
         Self {
             id: fixture.common.id,
-            code: fixture.common.code as i32,
+            code: fixture.common.code,
             game_week_id: fixture.common.event,
             home_team_id: fixture.common.team_h,
             away_team_id: fixture.common.team_a,
-            home_team_score: fixture.common.team_h_score.map(|s| s as i16),
-            away_team_score: fixture.common.team_a_score.map(|s| s as i16),
+            home_team_score: fixture.common.team_h_score,
+            away_team_score: fixture.common.team_a_score,
             kickoff_time: fixture.common.kickoff_time,
             finished: fixture.common.finished,
             started: fixture.started,
-            minutes: fixture.common.minutes as i16,
+            minutes: fixture.common.minutes,
             provisional_start_time: fixture.common.provisional_start_time,
-            team_h_difficulty: fixture.team_h_difficulty as i16,
-            team_a_difficulty: fixture.team_a_difficulty as i16,
-            pulse_id: fixture.pulse_id as i32,
+            team_h_difficulty: fixture.team_h_difficulty,
+            team_a_difficulty: fixture.team_a_difficulty,
+            pulse_id: fixture.pulse_id,
         }
     }
 }

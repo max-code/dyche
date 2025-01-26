@@ -1,9 +1,11 @@
 use sqlx::PgPool;
+use tracing::{debug, info};
 
 use crate::models::club::Club;
 
 pub async fn upsert_clubs(pool: &PgPool, clubs: &[Club]) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await?;
+    info!("Upserting {} Club rows", clubs.len());
 
     for club in clubs {
         sqlx::query!(
@@ -54,5 +56,6 @@ pub async fn upsert_clubs(pool: &PgPool, clubs: &[Club]) -> Result<(), sqlx::Err
     }
 
     tx.commit().await?;
+    debug!("Upsert Completed");
     Ok(())
 }

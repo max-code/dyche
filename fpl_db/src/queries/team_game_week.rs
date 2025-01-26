@@ -3,11 +3,15 @@ use crate::models::{
     TeamGameWeekAutomaticSub,
 };
 use sqlx::PgPool;
+use tracing::{debug, info};
 
 pub async fn upsert_team_game_week(
     pool: &PgPool,
     team_game_week: &TeamGameWeek,
 ) -> Result<(), sqlx::Error> {
+    let mut tx = pool.begin().await?;
+    info!("Upserting TeamGameWeek row");
+
     sqlx::query!(
         r#"
        INSERT INTO team_game_weeks (
@@ -45,8 +49,11 @@ pub async fn upsert_team_game_week(
         team_game_week.event_transfers_cost,
         team_game_week.points_on_bench,
     )
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
+
+    debug!("Upsert Completed");
+    tx.commit().await?;
     Ok(())
 }
 
@@ -55,6 +62,8 @@ pub async fn upsert_team_game_week_picks(
     picks: &[TeamGameWeekPick],
 ) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await?;
+    info!("Upserting {} TeamGameWeekPick rows", picks.len());
+
     for pick in picks {
         sqlx::query!(
             r#"
@@ -83,6 +92,7 @@ pub async fn upsert_team_game_week_picks(
         .await?;
     }
     tx.commit().await?;
+    debug!("Upsert Completed");
     Ok(())
 }
 
@@ -91,6 +101,8 @@ pub async fn upsert_team_game_week_automatic_subs(
     subs: &[TeamGameWeekAutomaticSub],
 ) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await?;
+    info!("Upserting {} TeamGameWeekAutomaticSub rows", subs.len());
+
     for sub in subs {
         sqlx::query!(
             r#"
@@ -109,5 +121,6 @@ pub async fn upsert_team_game_week_automatic_subs(
         .await?;
     }
     tx.commit().await?;
+    debug!("Upsert Completed");
     Ok(())
 }

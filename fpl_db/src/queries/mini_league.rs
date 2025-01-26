@@ -1,9 +1,12 @@
 use sqlx::PgPool;
+use tracing::{debug, info};
 
 use crate::models::mini_league::{MiniLeague, MiniLeagueStanding};
 
 pub async fn upsert_mini_leagues(pool: &PgPool, leagues: &[MiniLeague]) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await?;
+    info!("Upserting {} MiniLeague rows", leagues.len());
+
     for league in leagues {
         sqlx::query!(
             r#"
@@ -38,6 +41,7 @@ pub async fn upsert_mini_leagues(pool: &PgPool, leagues: &[MiniLeague]) -> Resul
         .await?;
     }
     tx.commit().await?;
+    debug!("Upsert Completed");
     Ok(())
 }
 
@@ -46,6 +50,8 @@ pub async fn upsert_mini_league_standings(
     standings: &[MiniLeagueStanding],
 ) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await?;
+    info!("Upserting {} MiniLeagueStanding rows", standings.len());
+
     for standing in standings {
         sqlx::query!(
             r#"
@@ -78,5 +84,6 @@ pub async fn upsert_mini_league_standings(
         .await?;
     }
     tx.commit().await?;
+    debug!("Upsert Completed");
     Ok(())
 }

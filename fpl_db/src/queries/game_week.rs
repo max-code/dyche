@@ -1,9 +1,12 @@
 use sqlx::PgPool;
+use tracing::{debug, info};
 
 use crate::models::game_week::{GameWeek, GameWeekChipPlay, GameWeekTopElement};
 
 pub async fn upsert_game_weeks(pool: &PgPool, game_weeks: &[GameWeek]) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await?;
+    info!("Upserting {} GameWeek rows", game_weeks.len());
+
     for game_week in game_weeks {
         sqlx::query!(
             r#"
@@ -60,6 +63,7 @@ pub async fn upsert_game_weeks(pool: &PgPool, game_weeks: &[GameWeek]) -> Result
         .await?;
     }
     tx.commit().await?;
+    debug!("Upsert Completed");
     Ok(())
 }
 
@@ -68,6 +72,8 @@ pub async fn upsert_game_week_chip_plays(
     chip_plays: &[GameWeekChipPlay],
 ) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await?;
+    info!("Upserting {} GameWeekChipPlay rows", chip_plays.len());
+
     for chip_play in chip_plays {
         sqlx::query!(
             r#"
@@ -88,6 +94,7 @@ pub async fn upsert_game_week_chip_plays(
         .await?;
     }
     tx.commit().await?;
+    debug!("Upsert Completed");
     Ok(())
 }
 
@@ -96,6 +103,8 @@ pub async fn upsert_game_week_top_elements(
     top_elements: &Vec<GameWeekTopElement>,
 ) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await?;
+    info!("Upserting {} GameWeekTopElement rows", top_elements.len());
+
     for top_element in top_elements {
         sqlx::query!(
             r#"
@@ -117,5 +126,6 @@ pub async fn upsert_game_week_top_elements(
         .await?;
     }
     tx.commit().await?;
+    debug!("Upsert Completed");
     Ok(())
 }

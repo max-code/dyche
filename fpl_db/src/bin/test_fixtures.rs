@@ -4,12 +4,13 @@ use fpl_db::models::fixture::Fixture;
 use fpl_db::queries::fixture::upsert_fixtures;
 use sqlx::PgPool;
 use std::time::Instant;
+use tracing::{debug, info};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let total_start = Instant::now();
 
-    dotenv::from_filename(".env").ok();
+    dotenv::from_filename("../.env").ok();
     let database_url =
         std::env::var("DATABASE_URL").expect("DATABASE_URL must be set in .env file");
 
@@ -25,7 +26,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("API request took: {:?}", api_start.elapsed());
 
     let conversion_start = Instant::now();
-    let fixtures_rows: Vec<Fixture> = fixtures.into_iter().map(|f| f.into()).collect();
+    let fixtures_rows: Vec<Fixture> = fixtures.iter().map(|f| f.into()).collect();
     println!("Conversion took: {:?}", conversion_start.elapsed());
 
     let upsert_start = Instant::now();

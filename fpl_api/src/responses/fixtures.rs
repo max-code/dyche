@@ -9,22 +9,22 @@ pub struct GameweekFixture {
     #[serde(flatten)]
     pub common: FixtureCommon,
     pub started: bool,
-    pub team_h_difficulty: u8,
-    pub team_a_difficulty: u8,
-    pub pulse_id: u32,
+    pub team_h_difficulty: i16,
+    pub team_a_difficulty: i16,
+    pub pulse_id: i32,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct FixtureCommon {
     pub id: FixtureId,
-    pub code: u32,
+    pub code: i32,
     pub team_h: ClubId,
-    pub team_h_score: Option<u8>,
+    pub team_h_score: Option<i16>,
     pub team_a: ClubId,
-    pub team_a_score: Option<u8>,
+    pub team_a_score: Option<i16>,
     pub event: GameWeekId,
     pub finished: bool,
-    pub minutes: u8,
+    pub minutes: i16,
     pub provisional_start_time: bool,
     pub kickoff_time: DateTime<Utc>,
 }

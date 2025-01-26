@@ -3,4 +3,22 @@ name = "fpl_scraper"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "scraper"
+path = "src/bin/scraper.rs"
+
 [dependencies]
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+sqlx = { workspace = true }
+async-trait = "0.1.85"
+tracing = { workspace = true }
+fpl_common = { path = "../fpl_common" }
+fpl_api = { path = "../fpl_api" }
+fpl_db = { path = "../fpl_db" }
+tokio = { version = "1", features = ["full"] }
+dotenv = { workspace = true }
+strum = { version = "0.26.3", features = ["derive"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

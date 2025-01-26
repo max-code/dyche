@@ -1,4 +1,5 @@
 use sqlx::PgPool;
+use tracing::{debug, info};
 
 use crate::models::game_week_player::GameWeekPlayerDb;
 pub async fn upsert_game_week_players(
@@ -6,6 +7,11 @@ pub async fn upsert_game_week_players(
     game_week_players: &[GameWeekPlayerDb],
 ) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await?;
+    info!(
+        "Upserting {} GameWeekPlayerDb rows",
+        game_week_players.len()
+    );
+
     for game_week_player in game_week_players {
         sqlx::query!(
             r#"
@@ -76,5 +82,6 @@ pub async fn upsert_game_week_players(
         .await?;
     }
     tx.commit().await?;
+    debug!("Upsert Completed");
     Ok(())
 }

@@ -5,12 +5,13 @@ use fpl_db::models::GameWeekPlayerDb;
 use fpl_db::queries::game_week_player::upsert_game_week_players;
 use sqlx::PgPool;
 use std::time::Instant;
+use tracing::{debug, info};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let total_start = Instant::now();
 
-    dotenv::from_filename(".env").ok();
+    dotenv::from_filename("../.env").ok();
     let database_url =
         std::env::var("DATABASE_URL").expect("DATABASE_URL must be set in .env file");
 
