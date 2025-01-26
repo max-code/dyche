@@ -17,3 +17,4 @@ fpl_api = { path = "../fpl_api" }
 chrono = "0.4.39"
 anyhow = "1.0.95"
 dotenv = "0.15.0"
+futures = "0.3"

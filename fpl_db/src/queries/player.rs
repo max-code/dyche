@@ -1,6 +1,6 @@
 use sqlx::PgPool;
 
-use crate::models::player::Player;
+use crate::models::{player::Player, PlayerFixtureDb, PlayerHistoryDb, PlayerHistoryPastDb};
 
 pub async fn upsert_players(pool: &PgPool, players: &[Player]) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await?;
@@ -228,6 +228,219 @@ pub async fn upsert_players(pool: &PgPool, players: &[Player]) -> Result<(), sql
        .await?;
     }
 
+    tx.commit().await?;
+    Ok(())
+}
+
+pub async fn upsert_player_fixtures(
+    pool: &PgPool,
+    player_fixtures: &[PlayerFixtureDb],
+) -> Result<(), sqlx::Error> {
+    let mut tx = pool.begin().await?;
+
+    for player_fixture in player_fixtures {
+        sqlx::query!(
+            r#"
+           INSERT INTO player_fixtures (
+           fixture_id, player_id, event_name, is_home, difficulty
+           )
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (player_id, fixture_id) DO UPDATE SET
+           event_name = EXCLUDED.event_name,
+           is_home = EXCLUDED.is_home,
+            difficulty = EXCLUDED.difficulty
+           "#,
+            i16::from(player_fixture.fixture_id),
+            i16::from(player_fixture.player_id),
+            player_fixture.event_name,
+            player_fixture.is_home,
+            player_fixture.difficulty
+        )
+        .execute(&mut *tx)
+        .await?;
+    }
+
+    tx.commit().await?;
+    Ok(())
+}
+
+pub async fn upsert_player_history_past(
+    pool: &PgPool,
+    histories: &[PlayerHistoryPastDb],
+) -> Result<(), sqlx::Error> {
+    let mut tx = pool.begin().await?;
+    for history in histories {
+        sqlx::query!(
+            r#"
+            INSERT INTO player_history_past (
+                player_id, season_name, element_code, start_cost, end_cost, total_points,
+                minutes, goals_scored, assists, clean_sheets, goals_conceded, own_goals,
+                penalties_saved, penalties_missed, yellow_cards, red_cards, saves, bonus,
+                bps, influence, creativity, threat, ict_index, starts, expected_goals,
+                expected_assists, expected_goal_involvements, expected_goals_conceded
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+                    $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)
+            ON CONFLICT (player_id, season_name) DO UPDATE SET
+                element_code = EXCLUDED.element_code,
+                start_cost = EXCLUDED.start_cost,
+                end_cost = EXCLUDED.end_cost,
+                total_points = EXCLUDED.total_points,
+                minutes = EXCLUDED.minutes,
+                goals_scored = EXCLUDED.goals_scored,
+                assists = EXCLUDED.assists,
+                clean_sheets = EXCLUDED.clean_sheets,
+                goals_conceded = EXCLUDED.goals_conceded,
+                own_goals = EXCLUDED.own_goals,
+                penalties_saved = EXCLUDED.penalties_saved,
+                penalties_missed = EXCLUDED.penalties_missed,
+                yellow_cards = EXCLUDED.yellow_cards,
+                red_cards = EXCLUDED.red_cards,
+                saves = EXCLUDED.saves,
+                bonus = EXCLUDED.bonus,
+                bps = EXCLUDED.bps,
+                influence = EXCLUDED.influence,
+                creativity = EXCLUDED.creativity,
+                threat = EXCLUDED.threat,
+                ict_index = EXCLUDED.ict_index,
+                starts = EXCLUDED.starts,
+                expected_goals = EXCLUDED.expected_goals,
+                expected_assists = EXCLUDED.expected_assists,
+                expected_goal_involvements = EXCLUDED.expected_goal_involvements,
+                expected_goals_conceded = EXCLUDED.expected_goals_conceded
+            "#,
+            i16::from(history.player_id),
+            history.season_name,
+            history.element_code,
+            history.start_cost,
+            history.end_cost,
+            history.total_points,
+            history.minutes,
+            history.goals_scored,
+            history.assists,
+            history.clean_sheets,
+            history.goals_conceded,
+            history.own_goals,
+            history.penalties_saved,
+            history.penalties_missed,
+            history.yellow_cards,
+            history.red_cards,
+            history.saves,
+            history.bonus,
+            history.bps,
+            history.influence,
+            history.creativity,
+            history.threat,
+            history.ict_index,
+            history.starts,
+            history.expected_goals,
+            history.expected_assists,
+            history.expected_goal_involvements,
+            history.expected_goals_conceded,
+        )
+        .execute(&mut *tx)
+        .await?;
+    }
+    tx.commit().await?;
+    Ok(())
+}
+
+pub async fn upsert_player_histories(
+    pool: &PgPool,
+    histories: &[PlayerHistoryDb],
+) -> Result<(), sqlx::Error> {
+    let mut tx = pool.begin().await?;
+    for history in histories {
+        sqlx::query!(
+            r#"
+            INSERT INTO player_history (
+                player_id, fixture_id, opponent_team, total_points, was_home, kickoff_time,
+                team_h_score, team_a_score, round, minutes, goals_scored, assists,
+                clean_sheets, goals_conceded, own_goals, penalties_saved, penalties_missed,
+                yellow_cards, red_cards, saves, bonus, bps, influence, creativity,
+                threat, ict_index, starts, expected_goals, expected_assists,
+                expected_goal_involvements, expected_goals_conceded, value,
+                transfers_balance, selected, transfers_in, transfers_out
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+                    $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28,
+                    $29, $30, $31, $32, $33, $34, $35, $36)
+            ON CONFLICT (player_id, fixture_id) DO UPDATE SET
+                opponent_team = EXCLUDED.opponent_team,
+                total_points = EXCLUDED.total_points,
+                was_home = EXCLUDED.was_home,
+                kickoff_time = EXCLUDED.kickoff_time,
+                team_h_score = EXCLUDED.team_h_score,
+                team_a_score = EXCLUDED.team_a_score,
+                round = EXCLUDED.round,
+                minutes = EXCLUDED.minutes,
+                goals_scored = EXCLUDED.goals_scored,
+                assists = EXCLUDED.assists,
+                clean_sheets = EXCLUDED.clean_sheets,
+                goals_conceded = EXCLUDED.goals_conceded,
+                own_goals = EXCLUDED.own_goals,
+                penalties_saved = EXCLUDED.penalties_saved,
+                penalties_missed = EXCLUDED.penalties_missed,
+                yellow_cards = EXCLUDED.yellow_cards,
+                red_cards = EXCLUDED.red_cards,
+                saves = EXCLUDED.saves,
+                bonus = EXCLUDED.bonus,
+                bps = EXCLUDED.bps,
+                influence = EXCLUDED.influence,
+                creativity = EXCLUDED.creativity,
+                threat = EXCLUDED.threat,
+                ict_index = EXCLUDED.ict_index,
+                starts = EXCLUDED.starts,
+                expected_goals = EXCLUDED.expected_goals,
+                expected_assists = EXCLUDED.expected_assists,
+                expected_goal_involvements = EXCLUDED.expected_goal_involvements,
+                expected_goals_conceded = EXCLUDED.expected_goals_conceded,
+                value = EXCLUDED.value,
+                transfers_balance = EXCLUDED.transfers_balance,
+                selected = EXCLUDED.selected,
+                transfers_in = EXCLUDED.transfers_in,
+                transfers_out = EXCLUDED.transfers_out
+            "#,
+            i16::from(history.player_id),
+            i16::from(history.fixture_id),
+            history.opponent_team,
+            history.total_points,
+            history.was_home,
+            history.kickoff_time,
+            history.team_h_score,
+            history.team_a_score,
+            i16::from(history.round),
+            history.minutes,
+            history.goals_scored,
+            history.assists,
+            history.clean_sheets,
+            history.goals_conceded,
+            history.own_goals,
+            history.penalties_saved,
+            history.penalties_missed,
+            history.yellow_cards,
+            history.red_cards,
+            history.saves,
+            history.bonus,
+            history.bps,
+            history.influence,
+            history.creativity,
+            history.threat,
+            history.ict_index,
+            history.starts,
+            history.expected_goals,
+            history.expected_assists,
+            history.expected_goal_involvements,
+            history.expected_goals_conceded,
+            history.value,
+            history.transfers_balance,
+            history.selected,
+            history.transfers_in,
+            history.transfers_out,
+        )
+        .execute(&mut *tx)
+        .await?;
+    }
     tx.commit().await?;
     Ok(())
 }

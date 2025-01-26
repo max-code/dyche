@@ -1,6 +1,7 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use fpl_api::responses::game_state::PlayerOverview;
-use fpl_common::types::{ClubId, PlayerId};
+use fpl_api::responses::player::{PlayerFixture, PlayerHistory, PlayerHistoryPast};
+use fpl_common::types::{ClubId, FixtureId, GameWeekId, PlayerId};
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct Player {
@@ -99,9 +100,9 @@ pub struct Player {
     pub clean_sheets_per_90: f32,
 }
 
-impl TryFrom<PlayerOverview> for Player {
+impl TryFrom<&PlayerOverview> for Player {
     type Error = anyhow::Error;
-    fn try_from(player: PlayerOverview) -> Result<Self, Self::Error> {
+    fn try_from(player: &PlayerOverview) -> Result<Self, Self::Error> {
         Ok(Self {
             id: player.id,
             can_transact: player.can_transact,
@@ -118,20 +119,20 @@ impl TryFrom<PlayerOverview> for Player {
             ep_next: player.ep_next,
             ep_this: player.ep_this,
             event_points: player.event_points as i16,
-            first_name: player.first_name,
+            first_name: player.first_name.clone(),
             form: player.form,
             in_dreamteam: player.in_dreamteam,
-            news: player.news,
+            news: player.news.clone(),
             news_added: player.news_added,
             now_cost: player.now_cost as i16,
-            photo: player.photo,
+            photo: player.photo.clone(),
             points_per_game: player.points_per_game,
             removed: player.removed,
-            second_name: player.second_name,
+            second_name: player.second_name.clone(),
             selected_by_percent: player.selected_by_percent,
             special: player.special,
             squad_number: player.squad_number.map(|v| v as i16),
-            status: player.status,
+            status: player.status.clone(),
             team: player.team,
             team_code: player.team_code as i16,
             total_points: player.total_points as i16,
@@ -141,7 +142,7 @@ impl TryFrom<PlayerOverview> for Player {
             transfers_out_event: player.transfers_out_event as i32,
             value_form: player.value_form,
             value_season: player.value_season,
-            web_name: player.web_name,
+            web_name: player.web_name.clone(),
             region: player.region.map(|v| v as i16),
             team_join_date: player.team_join_date,
             minutes: player.minutes as i16,
@@ -177,11 +178,11 @@ impl TryFrom<PlayerOverview> for Player {
             corners_and_indirect_freekicks_order: player
                 .corners_and_indirect_freekicks_order
                 .map(|v| v as i16),
-            corners_and_indirect_freekicks_text: player.corners_and_indirect_freekicks_text,
+            corners_and_indirect_freekicks_text: player.corners_and_indirect_freekicks_text.clone(),
             direct_freekicks_order: player.direct_freekicks_order.map(|v| v as i16),
-            direct_freekicks_text: player.direct_freekicks_text,
+            direct_freekicks_text: player.direct_freekicks_text.clone(),
             penalties_order: player.penalties_order.map(|v| v as i16),
-            penalties_text: player.penalties_text,
+            penalties_text: player.penalties_text.clone(),
             expected_goals_per_90: player.expected_goals_per_90,
             saves_per_90: player.saves_per_90,
             expected_assists_per_90: player.expected_assists_per_90,
@@ -198,6 +199,182 @@ impl TryFrom<PlayerOverview> for Player {
             selected_rank_type: player.selected_rank_type as i16,
             starts_per_90: player.starts_per_90,
             clean_sheets_per_90: player.clean_sheets_per_90,
+        })
+    }
+}
+
+#[derive(Debug, sqlx::FromRow)]
+pub struct PlayerFixtureDb {
+    pub player_id: PlayerId,
+    pub fixture_id: FixtureId,
+    pub event_name: String,
+    pub is_home: bool,
+    pub difficulty: i16,
+}
+
+impl TryFrom<(PlayerId, &PlayerFixture)> for PlayerFixtureDb {
+    type Error = anyhow::Error;
+    fn try_from(
+        (player_id, player_fixture): (PlayerId, &PlayerFixture),
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            player_id,
+            fixture_id: player_fixture.common.id,
+            event_name: player_fixture.event_name.clone(),
+            is_home: player_fixture.is_home,
+            difficulty: player_fixture.difficulty,
+        })
+    }
+}
+
+#[derive(Debug, sqlx::FromRow)]
+pub struct PlayerHistoryPastDb {
+    pub player_id: PlayerId,
+    pub season_name: String,
+    pub element_code: i32,
+    pub start_cost: i16,
+    pub end_cost: i16,
+    pub total_points: i16,
+    pub minutes: i16,
+    pub goals_scored: i16,
+    pub assists: i16,
+    pub clean_sheets: i16,
+    pub goals_conceded: i16,
+    pub own_goals: i16,
+    pub penalties_saved: i16,
+    pub penalties_missed: i16,
+    pub yellow_cards: i16,
+    pub red_cards: i16,
+    pub saves: i16,
+    pub bonus: i16,
+    pub bps: i16,
+    pub influence: f32,
+    pub creativity: f32,
+    pub threat: f32,
+    pub ict_index: f32,
+    pub starts: i16,
+    pub expected_goals: f32,
+    pub expected_assists: f32,
+    pub expected_goal_involvements: f32,
+    pub expected_goals_conceded: f32,
+}
+
+impl TryFrom<(PlayerId, &PlayerHistoryPast)> for PlayerHistoryPastDb {
+    type Error = anyhow::Error;
+    fn try_from((player_id, past): (PlayerId, &PlayerHistoryPast)) -> Result<Self, Self::Error> {
+        Ok(Self {
+            player_id,
+            season_name: past.season_name.clone(),
+            element_code: past.element_code,
+            start_cost: past.start_cost,
+            end_cost: past.end_cost,
+            total_points: past.total_points,
+            minutes: past.minutes,
+            goals_scored: past.goals_scored,
+            assists: past.assists,
+            clean_sheets: past.clean_sheets,
+            goals_conceded: past.goals_conceded,
+            own_goals: past.own_goals,
+            penalties_saved: past.penalties_saved,
+            penalties_missed: past.penalties_missed,
+            yellow_cards: past.yellow_cards,
+            red_cards: past.red_cards,
+            saves: past.saves,
+            bonus: past.bonus,
+            bps: past.bps,
+            influence: past.influence,
+            creativity: past.creativity,
+            threat: past.threat,
+            ict_index: past.ict_index,
+            starts: past.starts,
+            expected_goals: past.expected_goals,
+            expected_assists: past.expected_assists,
+            expected_goal_involvements: past.expected_goal_involvements,
+            expected_goals_conceded: past.expected_goals_conceded,
+        })
+    }
+}
+
+#[derive(Debug, sqlx::FromRow)]
+pub struct PlayerHistoryDb {
+    pub player_id: PlayerId,
+    pub fixture_id: FixtureId,
+    pub opponent_team: i16,
+    pub total_points: i16,
+    pub was_home: bool,
+    pub kickoff_time: DateTime<Utc>,
+    pub team_h_score: Option<i16>,
+    pub team_a_score: Option<i16>,
+    pub round: GameWeekId,
+    pub minutes: i16,
+    pub goals_scored: i16,
+    pub assists: i16,
+    pub clean_sheets: i16,
+    pub goals_conceded: i16,
+    pub own_goals: i16,
+    pub penalties_saved: i16,
+    pub penalties_missed: i16,
+    pub yellow_cards: i16,
+    pub red_cards: i16,
+    pub saves: i16,
+    pub bonus: i16,
+    pub bps: i16,
+    pub influence: f32,
+    pub creativity: f32,
+    pub threat: f32,
+    pub ict_index: f32,
+    pub starts: i16,
+    pub expected_goals: f32,
+    pub expected_assists: f32,
+    pub expected_goal_involvements: f32,
+    pub expected_goals_conceded: f32,
+    pub value: i16,
+    pub transfers_balance: i32,
+    pub selected: i32,
+    pub transfers_in: i32,
+    pub transfers_out: i32,
+}
+
+impl TryFrom<&PlayerHistory> for PlayerHistoryDb {
+    type Error = anyhow::Error;
+    fn try_from(history: &PlayerHistory) -> Result<Self, Self::Error> {
+        Ok(Self {
+            player_id: history.element,
+            fixture_id: history.fixture,
+            opponent_team: history.opponent_team,
+            total_points: history.total_points,
+            was_home: history.was_home,
+            kickoff_time: history.kickoff_time,
+            team_h_score: history.team_h_score,
+            team_a_score: history.team_a_score,
+            round: history.round,
+            minutes: history.minutes,
+            goals_scored: history.goals_scored,
+            assists: history.assists,
+            clean_sheets: history.clean_sheets,
+            goals_conceded: history.goals_conceded,
+            own_goals: history.own_goals,
+            penalties_saved: history.penalties_saved,
+            penalties_missed: history.penalties_missed,
+            yellow_cards: history.yellow_cards,
+            red_cards: history.red_cards,
+            saves: history.saves,
+            bonus: history.bonus,
+            bps: history.bps,
+            influence: history.influence,
+            creativity: history.creativity,
+            threat: history.threat,
+            ict_index: history.ict_index,
+            starts: history.starts,
+            expected_goals: history.expected_goals,
+            expected_assists: history.expected_assists,
+            expected_goal_involvements: history.expected_goal_involvements,
+            expected_goals_conceded: history.expected_goals_conceded,
+            value: history.value,
+            transfers_balance: history.transfers_balance,
+            selected: history.selected,
+            transfers_in: history.transfers_in,
+            transfers_out: history.transfers_out,
         })
     }
 }

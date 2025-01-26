@@ -22,4 +22,14 @@ impl FplRequest for TeamGameWeekRequest {
             base_url, self.team_id, self.game_week
         )
     }
+
+    fn process_response(
+        &self,
+        response: serde_json::Value,
+    ) -> Result<Self::Response, serde_json::Error> {
+        let mut resp: TeamGameWeekResponse = serde_json::from_value(response)?;
+        resp.team_id = Some(self.team_id);
+        resp.game_week_id = Some(self.game_week);
+        Ok(resp)
+    }
 }

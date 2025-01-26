@@ -1,4 +1,4 @@
-use fpl_common::types::{Chip, GameWeekId, PlayerPosition, TeamId};
+use fpl_common::types::{Chip, GameWeekId, PlayerId, PlayerPosition, TeamId};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -7,29 +7,31 @@ pub struct TeamGameWeekResponse {
     pub automatic_subs: Vec<AutomaticSub>,
     pub entry_history: EntryHistory,
     pub picks: Vec<Pick>,
+    pub team_id: Option<TeamId>,
+    pub game_week_id: Option<GameWeekId>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct EntryHistory {
     pub event: GameWeekId,
-    pub points: u8,
-    pub total_points: u16,
-    pub rank: u32,
-    pub rank_sort: u32,
-    pub overall_rank: u32,
-    pub percentile_rank: u8,
-    pub bank: u16,
-    pub value: u16,
-    pub event_transfers: u8,
-    pub event_transfers_cost: u8,
-    pub points_on_bench: u8,
+    pub points: i16,
+    pub total_points: i16,
+    pub rank: i32,
+    pub rank_sort: i32,
+    pub overall_rank: i32,
+    pub percentile_rank: i16,
+    pub bank: i16,
+    pub value: i16,
+    pub event_transfers: i16,
+    pub event_transfers_cost: i16,
+    pub points_on_bench: i16,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Pick {
-    pub element: u16,
-    pub position: u8,
-    pub multiplier: u8,
+    pub element: PlayerId,
+    pub position: i16,
+    pub multiplier: i16,
     pub is_captain: bool,
     pub is_vice_captain: bool,
     pub element_type: PlayerPosition,
@@ -44,7 +46,7 @@ impl Pick {
 #[derive(Debug, Deserialize)]
 pub struct AutomaticSub {
     pub entry: TeamId,
-    pub element_in: u16,
-    pub element_out: u16,
+    pub element_in: PlayerId,
+    pub element_out: PlayerId,
     pub event: GameWeekId,
 }

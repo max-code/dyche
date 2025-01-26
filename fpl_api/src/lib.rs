@@ -8,6 +8,7 @@ use std::time::Duration;
 
 pub const REQ_TIMEOUT_SECONDS: u64 = 30;
 
+#[derive(Clone)]
 pub struct FplClient {
     client: Client,
     base_url: String,

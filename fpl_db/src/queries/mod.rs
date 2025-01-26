@@ -5,3 +5,4 @@ pub mod game_week_player;
 pub mod mini_league;
 pub mod player;
 pub mod team;
+pub mod team_game_week;

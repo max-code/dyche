@@ -18,4 +18,13 @@ impl FplRequest for PlayerRequest {
     fn to_url(&self, base_url: &str) -> String {
         format!("{}/element-summary/{}/", base_url, self.player_id)
     }
+
+    fn process_response(
+        &self,
+        response: serde_json::Value,
+    ) -> Result<Self::Response, serde_json::Error> {
+        let mut resp: PlayerResponse = serde_json::from_value(response)?;
+        resp.player_id = Some(self.player_id);
+        Ok(resp)
+    }
 }
