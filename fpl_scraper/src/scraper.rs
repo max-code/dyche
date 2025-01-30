@@ -96,11 +96,18 @@ impl ScraperManager {
     async fn process_all_scrapers(&self) -> ScraperResult {
         for order in ScraperOrder::iter() {
             if let Some(scrapers) = self.scrapers.get(&order) {
+                let names = scrapers
+                    .iter()
+                    .map(|scraper| scraper.name())
+                    .collect::<Vec<_>>();
+
                 info!(
-                    "PROCESSING {} SCRAPERS WITH ORDER {:?}",
+                    "[Order {:?}] Processing {} scrapers ({})",
+                    order,
                     scrapers.len(),
-                    order
+                    names.join(", ")
                 );
+
                 let scraper_futures: Vec<_> = scrapers
                     .iter()
                     .map(|scraper| self.handle_scraper(scraper, order))

@@ -22,7 +22,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // USER REGISTERS
     let client = FplClient::new();
-    let registering_user = TeamId::new(5040430);
+    let registering_user = TeamId::new(40902);
     let request = TeamRequest::new(registering_user);
 
     let api_start = Instant::now();

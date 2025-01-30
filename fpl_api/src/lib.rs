@@ -6,7 +6,7 @@ use reqwest::Client;
 use serde_json::Value;
 use std::time::Duration;
 use thiserror::Error;
-use tracing::info;
+use tracing::debug;
 
 pub const REQ_TIMEOUT_SECONDS: u64 = 30;
 
@@ -68,7 +68,7 @@ impl FplClient {
         request: T,
     ) -> Result<T::Response, FplClientError> {
         let url = request.to_url(&self.base_url);
-        info!("Making {:?} with URL {}", request, url);
+        debug!("Making {:?} with URL {}", request, url);
         let response = self.client.get(&url).send().await?;
         let status = response.status();
         let body = response.text().await?;

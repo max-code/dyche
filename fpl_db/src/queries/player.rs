@@ -1,3 +1,4 @@
+use fpl_common::types::PlayerId;
 use sqlx::PgPool;
 use tracing::{debug, info};
 
@@ -454,4 +455,15 @@ pub async fn upsert_player_histories(
     tx.commit().await?;
     debug!("Upsert Completed");
     Ok(())
+}
+
+pub async fn get_all_player_ids(pool: &PgPool) -> Result<Vec<PlayerId>, sqlx::Error> {
+    let ids = sqlx::query!("SELECT id FROM players")
+        .fetch_all(pool)
+        .await?
+        .into_iter()
+        .map(|row| PlayerId::from(row.id))
+        .collect();
+
+    Ok(ids)
 }

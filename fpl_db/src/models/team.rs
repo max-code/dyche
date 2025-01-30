@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use fpl_api::responses::team::TeamResponse;
 use fpl_common::types::{ClubId, GameWeekId, TeamId};
 
-#[derive(Debug, sqlx::FromRow)]
+#[derive(Debug, Clone, sqlx::FromRow)]
 pub struct Team {
     pub id: TeamId,
     pub joined_time: DateTime<Utc>,

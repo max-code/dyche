@@ -4,27 +4,27 @@ use crate::error::ScraperError;
 use crate::scraper::{Scraper, ScraperOrder, ShouldScrape};
 use crate::NoScrapeReason;
 use async_trait::async_trait;
+use fpl_db::models::GameWeekPlayerDb;
+use fpl_db::queries::game_week_player::upsert_game_week_players;
 use sqlx::PgPool;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info};
 
-use fpl_api::requests::FixtureRequest;
+use fpl_api::requests::GameWeekPlayersStatsRequest;
 use fpl_api::FplClient;
+use fpl_common::types::GameWeekId;
 
-use fpl_db::models::Fixture;
-use fpl_db::queries::fixture::upsert_fixtures;
-
-pub struct FixturesScraper {
+pub struct GameWeekPlayersScraper {
     pool: Arc<PgPool>,
     client: Arc<FplClient>,
     min_scrape_interval: Duration,
     last_scrape: RwLock<Option<SystemTime>>,
 }
 
-impl FixturesScraper {
+impl GameWeekPlayersScraper {
     pub fn new(pool: Arc<PgPool>, client: Arc<FplClient>, min_scrape_interval: Duration) -> Self {
-        info!("Creating FixtureScraper");
+        info!("Creating GameWeekPlayersScraper");
         Self {
             pool,
             client,
@@ -32,10 +32,24 @@ impl FixturesScraper {
             last_scrape: RwLock::new(None),
         }
     }
+
+    async fn process_game_week_players(
+        client: Arc<FplClient>,
+        game_week_id: GameWeekId,
+    ) -> Result<Vec<GameWeekPlayerDb>, ScraperError> {
+        let game_week_response = client
+            .get(GameWeekPlayersStatsRequest::new(game_week_id))
+            .await?;
+        Ok(game_week_response
+            .elements
+            .into_iter()
+            .map(|gwp| (game_week_id, gwp).into())
+            .collect())
+    }
 }
 
 #[async_trait]
-impl Scraper for FixturesScraper {
+impl Scraper for GameWeekPlayersScraper {
     async fn should_scrape(&self) -> ShouldScrape {
         let last_scrape = self.last_scrape.read().await;
         let result;
@@ -64,25 +78,29 @@ impl Scraper for FixturesScraper {
     }
 
     fn name(&self) -> &'static str {
-        "FixturesScraper"
+        "GameWeekPlayersScraper"
     }
 
     async fn scrape(&self) -> Result<(), ScraperError> {
-        let request = FixtureRequest::new();
-        let fixtures = self.client.get(request).await?;
+        let futures: Vec<_> = GameWeekId::all_weeks_iter()
+            .map(|game_week_id| {
+                GameWeekPlayersScraper::process_game_week_players(self.client.clone(), game_week_id)
+            })
+            .collect();
+        let results = futures::future::join_all(futures).await;
 
-        let fixtures_rows: Vec<Fixture> = fixtures.iter().map(|f| f.into()).collect();
+        let game_week_players = results.into_iter().collect::<Result<Vec<_>, _>>()?;
 
-        debug!(
-            "[{}] Got {} fixtures from the API. Converted to {} Fixture rows for upsertion.",
-            self.name(),
-            fixtures.len(),
-            fixtures_rows.len()
-        );
-
-        upsert_fixtures(&self.pool, &fixtures_rows)
-            .await
-            .map_err(ScraperError::DatabaseError)?;
+        for (idx, week) in game_week_players.into_iter().enumerate() {
+            upsert_game_week_players(&self.pool, &week).await?;
+            debug!(
+                "[{}] Got {} players from the API for the week {}. Converted to {} GameWeekPlayerDb rows for upsertion.",
+                self.name(),
+                week.len(),
+                idx + 1,
+                week.len()
+            );
+        }
 
         *self.last_scrape.write().await = Some(SystemTime::now());
         Ok(())

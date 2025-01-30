@@ -4,27 +4,27 @@ use crate::error::ScraperError;
 use crate::scraper::{Scraper, ScraperOrder, ShouldScrape};
 use crate::NoScrapeReason;
 use async_trait::async_trait;
+use fpl_db::models::Team;
 use sqlx::PgPool;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info};
 
-use fpl_api::requests::FixtureRequest;
+use fpl_api::requests::TeamRequest;
 use fpl_api::FplClient;
+use fpl_common::types::TeamId;
+use fpl_db::queries::team::{get_all_team_ids, upsert_teams};
 
-use fpl_db::models::Fixture;
-use fpl_db::queries::fixture::upsert_fixtures;
-
-pub struct FixturesScraper {
+pub struct TeamsScraper {
     pool: Arc<PgPool>,
     client: Arc<FplClient>,
     min_scrape_interval: Duration,
     last_scrape: RwLock<Option<SystemTime>>,
 }
 
-impl FixturesScraper {
+impl TeamsScraper {
     pub fn new(pool: Arc<PgPool>, client: Arc<FplClient>, min_scrape_interval: Duration) -> Self {
-        info!("Creating FixtureScraper");
+        info!("Creating TeamsScraper");
         Self {
             pool,
             client,
@@ -32,10 +32,18 @@ impl FixturesScraper {
             last_scrape: RwLock::new(None),
         }
     }
+
+    async fn process_teams_request(
+        client: Arc<FplClient>,
+        team_id: TeamId,
+    ) -> Result<Team, ScraperError> {
+        let team_response = client.get(TeamRequest::new(team_id)).await?;
+        Ok((&team_response).into())
+    }
 }
 
 #[async_trait]
-impl Scraper for FixturesScraper {
+impl Scraper for TeamsScraper {
     async fn should_scrape(&self) -> ShouldScrape {
         let last_scrape = self.last_scrape.read().await;
         let result;
@@ -64,25 +72,37 @@ impl Scraper for FixturesScraper {
     }
 
     fn name(&self) -> &'static str {
-        "FixturesScraper"
+        "TeamsScraper"
     }
 
     async fn scrape(&self) -> Result<(), ScraperError> {
-        let request = FixtureRequest::new();
-        let fixtures = self.client.get(request).await?;
+        let team_ids = get_all_team_ids(&self.pool)
+            .await
+            .map_err(|e| ScraperError::DatabaseError(e))?;
 
-        let fixtures_rows: Vec<Fixture> = fixtures.iter().map(|f| f.into()).collect();
+        let team_id_chunks: Vec<_> = team_ids.chunks(100).map(|c| c.to_vec()).collect();
+        let mut all_teams = Vec::with_capacity(team_ids.len());
+
+        for chunk in team_id_chunks {
+            let futures: Vec<_> = chunk
+                .into_iter()
+                .map(|team_id| TeamsScraper::process_teams_request(self.client.clone(), team_id))
+                .collect();
+            let results = futures::future::join_all(futures).await;
+
+            let teams = results.into_iter().collect::<Result<Vec<_>, _>>()?;
+
+            all_teams.extend(teams);
+        }
+
+        upsert_teams(&self.pool, &all_teams).await?;
 
         debug!(
-            "[{}] Got {} fixtures from the API. Converted to {} Fixture rows for upsertion.",
+            "[{}] Got {} teams from the API. Converted to {} Team rows for upsertion.",
             self.name(),
-            fixtures.len(),
-            fixtures_rows.len()
+            all_teams.len(),
+            all_teams.len()
         );
-
-        upsert_fixtures(&self.pool, &fixtures_rows)
-            .await
-            .map_err(ScraperError::DatabaseError)?;
 
         *self.last_scrape.write().await = Some(SystemTime::now());
         Ok(())

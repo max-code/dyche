@@ -150,7 +150,7 @@ impl Scraper for GameStateScraper {
             }
         }
 
-        info!("[{}] Should Scrape Result: {:?}", self.name(), result);
+        debug!("[{}] Should Scrape Result: {:?}", self.name(), result);
         result
     }
 
@@ -162,9 +162,9 @@ impl Scraper for GameStateScraper {
         let request = GameStateRequest::new();
         let game_state = self.client.get(request).await?;
 
-        GameStateScraper::handle_game_weeks(&self.pool, self.name(), &game_state.events).await?;
         GameStateScraper::handle_clubs(&self.pool, self.name(), &game_state.teams).await?;
         GameStateScraper::handle_players(&self.pool, self.name(), &game_state.elements).await?;
+        GameStateScraper::handle_game_weeks(&self.pool, self.name(), &game_state.events).await?;
 
         *self.last_scrape.write().await = Some(SystemTime::now());
         Ok(())
