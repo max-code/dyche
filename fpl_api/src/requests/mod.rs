@@ -11,7 +11,7 @@ pub trait FplRequest {
 
 pub mod fixtures;
 pub mod game_state;
-pub mod game_week_players_stats;
+pub mod game_week_players;
 pub mod mini_league;
 pub mod player;
 pub mod team;
@@ -20,7 +20,7 @@ pub mod transfers;
 
 pub use fixtures::*;
 pub use game_state::*;
-pub use game_week_players_stats::*;
+pub use game_week_players::*;
 pub use mini_league::*;
 pub use player::*;
 pub use team::*;

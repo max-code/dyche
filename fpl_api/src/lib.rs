@@ -20,6 +20,8 @@ pub enum FplClientError {
     },
     #[error("JSON parsing error (status: {1}): {0}")]
     JsonError(serde_json::Error, reqwest::StatusCode),
+    #[error("Response body missing extra detail that should have been added in process_response.")]
+    MissingExtraDetailError,
 }
 
 impl From<(serde_json::Error, reqwest::StatusCode)> for FplClientError {
@@ -84,8 +86,8 @@ mod tests {
 
     use fpl_common::types::{GameWeekId, LeagueId, PlayerId, TeamId};
     use requests::{
-        FixtureRequest, GameStateRequest, GameWeekPlayersStatsRequest, MiniLeagueRequest,
-        PlayerRequest, TransfersRequest,
+        FixtureRequest, GameStateRequest, GameWeekPlayersRequest, MiniLeagueRequest, PlayerRequest,
+        TransfersRequest,
     };
 
     use super::*;
@@ -159,14 +161,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_game_week_players_stats_request() {
+    async fn test_game_week_players_request() {
         // Arrange
         let client = FplClient::new();
         let gw = GameWeekId::new(25);
         assert!(gw.is_ok(), "GameWeek 20 should be valid.");
 
         // Act
-        let request = GameWeekPlayersStatsRequest::new(gw.unwrap());
+        let request = GameWeekPlayersRequest::new(gw.unwrap());
         let response = client.get(request).await.unwrap();
 
         // Assert
@@ -196,6 +198,6 @@ mod tests {
         let response = client.get(request).await.unwrap();
 
         // Assert
-        println!("Response: {:#?}", response);
+        // println!("Response: {:#?}", response);
     }
 }

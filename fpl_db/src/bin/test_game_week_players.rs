@@ -1,4 +1,4 @@
-use fpl_api::requests::GameWeekPlayersStatsRequest;
+use fpl_api::requests::GameWeekPlayersRequest;
 use fpl_api::FplClient;
 use fpl_common::types::GameWeekId;
 use fpl_db::models::GameWeekPlayerDb;
@@ -21,7 +21,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = FplClient::new();
 
     for (idx, game_week) in GameWeekId::all_weeks_iter().enumerate() {
-        let request = GameWeekPlayersStatsRequest::new(game_week);
+        let request = GameWeekPlayersRequest::new(game_week);
 
         let api_start = Instant::now();
         let game_week_players = client.get(request).await.unwrap();

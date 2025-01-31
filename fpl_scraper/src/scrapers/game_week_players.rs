@@ -11,7 +11,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info};
 
-use fpl_api::requests::GameWeekPlayersStatsRequest;
+use fpl_api::requests::GameWeekPlayersRequest;
 use fpl_api::FplClient;
 use fpl_common::types::GameWeekId;
 
@@ -38,7 +38,7 @@ impl GameWeekPlayersScraper {
         game_week_id: GameWeekId,
     ) -> Result<Vec<GameWeekPlayerDb>, ScraperError> {
         let game_week_response = client
-            .get(GameWeekPlayersStatsRequest::new(game_week_id))
+            .get(GameWeekPlayersRequest::new(game_week_id))
             .await?;
         Ok(game_week_response
             .elements

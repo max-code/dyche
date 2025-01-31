@@ -1,11 +1,11 @@
 use sqlx::PgPool;
-use tracing::{debug, info};
+use tracing::debug;
 
 use crate::models::transfers::Transfer;
 
 pub async fn upsert_transfers(pool: &PgPool, transfers: &[Transfer]) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await?;
-    info!("Upserting {} Transfer rows", transfers.len());
+    debug!("Upserting {} Transfer rows", transfers.len());
 
     for transfer in transfers {
         sqlx::query!(

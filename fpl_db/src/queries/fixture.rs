@@ -1,11 +1,11 @@
 use sqlx::PgPool;
-use tracing::{debug, info};
+use tracing::debug;
 
 use crate::models::fixture::Fixture;
 
 pub async fn upsert_fixtures(pool: &PgPool, fixtures: &[Fixture]) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await?;
-    info!("Upserting {} Fixture rows", fixtures.len());
+    debug!("Upserting {} Fixture rows", fixtures.len());
     for fixture in fixtures {
         sqlx::query!(
             r#"

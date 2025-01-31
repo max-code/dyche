@@ -1,4 +1,4 @@
-use fpl_api::responses::game_week_players_stats::GameWeekPlayer;
+use fpl_api::responses::game_week_players::GameWeekPlayer;
 use fpl_common::types::{GameWeekId, PlayerId};
 
 #[derive(Debug, sqlx::FromRow)]

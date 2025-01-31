@@ -1,5 +1,5 @@
 use sqlx::PgPool;
-use tracing::{debug, info};
+use tracing::debug;
 
 use fpl_common::types::TeamId;
 
@@ -7,7 +7,7 @@ use crate::models::team::Team;
 
 pub async fn upsert_teams(pool: &PgPool, teams: &[Team]) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await?;
-    info!("Upserting {} Team rows", teams.len());
+    debug!("Upserting {} Team rows", teams.len());
 
     for team in teams {
         sqlx::query!(

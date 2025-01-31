@@ -1,19 +1,19 @@
 use super::FplRequest;
-use crate::responses::game_week_players_stats::GameWeekPlayersStatsResponse;
+use crate::responses::game_week_players::GameWeekPlayersStatsResponse;
 use fpl_common::types::GameWeekId;
 
 #[derive(Debug)]
-pub struct GameWeekPlayersStatsRequest {
+pub struct GameWeekPlayersRequest {
     pub game_week: GameWeekId,
 }
 
-impl GameWeekPlayersStatsRequest {
+impl GameWeekPlayersRequest {
     pub fn new(game_week: GameWeekId) -> Self {
         Self { game_week }
     }
 }
 
-impl FplRequest for GameWeekPlayersStatsRequest {
+impl FplRequest for GameWeekPlayersRequest {
     type Response = GameWeekPlayersStatsResponse;
 
     fn to_url(&self, base_url: &str) -> String {

@@ -1,12 +1,12 @@
 use fpl_common::types::PlayerId;
 use sqlx::PgPool;
-use tracing::{debug, info};
+use tracing::debug;
 
 use crate::models::{player::Player, PlayerFixtureDb, PlayerHistoryDb, PlayerHistoryPastDb};
 
 pub async fn upsert_players(pool: &PgPool, players: &[Player]) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await?;
-    info!("Upserting {} Player rows", players.len());
+    debug!("Upserting {} Player rows", players.len());
 
     for player in players {
         sqlx::query!(
@@ -241,7 +241,7 @@ pub async fn upsert_player_fixtures(
     player_fixtures: &[PlayerFixtureDb],
 ) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await?;
-    info!("Upserting {} PlayerFixtureDb rows", player_fixtures.len());
+    debug!("Upserting {} PlayerFixtureDb rows", player_fixtures.len());
 
     for player_fixture in player_fixtures {
         sqlx::query!(
@@ -275,7 +275,7 @@ pub async fn upsert_player_history_past(
     histories: &[PlayerHistoryPastDb],
 ) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await?;
-    info!("Upserting {} PlayerHistoryPastDb rows", histories.len());
+    debug!("Upserting {} PlayerHistoryPastDb rows", histories.len());
 
     for history in histories {
         sqlx::query!(
@@ -359,7 +359,7 @@ pub async fn upsert_player_histories(
     histories: &[PlayerHistoryDb],
 ) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await?;
-    info!("Upserting {} PlayerHistoryDb rows", histories.len());
+    debug!("Upserting {} PlayerHistoryDb rows", histories.len());
 
     for history in histories {
         sqlx::query!(

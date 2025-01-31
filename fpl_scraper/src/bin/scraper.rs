@@ -4,8 +4,8 @@ use std::time::Duration;
 use fpl_api::FplClient;
 use fpl_scraper::{
     fixtures::FixturesScraper, game_state::GameStateScraper,
-    game_week_players::GameWeekPlayersScraper, players::PlayersScraper, teams::TeamsScraper,
-    Scraper, ScraperManager,
+    game_week_players::GameWeekPlayersScraper, players::PlayersScraper,
+    team_game_weeks::TeamGameWeekScraper, teams::TeamsScraper, ScraperManager,
 };
 use sqlx::PgPool;
 use tracing::info;
@@ -31,26 +31,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // First
     let game_state_scraper =
         GameStateScraper::new(Arc::clone(&pool), Arc::clone(&client), five_minutes);
-    manager.register_scraper(game_state_scraper.position(), game_state_scraper);
+    manager.register_scraper(game_state_scraper);
 
     // Second
     let fixtures_scraper =
         FixturesScraper::new(Arc::clone(&pool), Arc::clone(&client), five_minutes);
-    manager.register_scraper(fixtures_scraper.position(), fixtures_scraper);
+    manager.register_scraper(fixtures_scraper);
 
     let teams_scraper = TeamsScraper::new(Arc::clone(&pool), Arc::clone(&client), five_minutes);
-    manager.register_scraper(teams_scraper.position(), teams_scraper);
+    manager.register_scraper(teams_scraper);
 
     let game_week_players_scraper =
         GameWeekPlayersScraper::new(Arc::clone(&pool), Arc::clone(&client), five_minutes);
-    manager.register_scraper(
-        game_week_players_scraper.position(),
-        game_week_players_scraper,
-    );
+    manager.register_scraper(game_week_players_scraper);
 
     // Third
     let player_scraper = PlayersScraper::new(Arc::clone(&pool), Arc::clone(&client), five_minutes);
-    manager.register_scraper(player_scraper.position(), player_scraper);
+    manager.register_scraper(player_scraper);
+
+    let team_game_week_scraper =
+        TeamGameWeekScraper::new(Arc::clone(&pool), Arc::clone(&client), five_minutes);
+    manager.register_scraper(team_game_week_scraper);
 
     manager.run().await;
     Ok(())

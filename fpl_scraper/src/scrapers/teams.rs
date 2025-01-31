@@ -5,10 +5,11 @@ use crate::scraper::{Scraper, ScraperOrder, ShouldScrape};
 use crate::NoScrapeReason;
 use async_trait::async_trait;
 use fpl_db::models::Team;
+use futures::StreamExt;
 use sqlx::PgPool;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 
 use fpl_api::requests::TeamRequest;
 use fpl_api::FplClient;
@@ -76,32 +77,47 @@ impl Scraper for TeamsScraper {
     }
 
     async fn scrape(&self) -> Result<(), ScraperError> {
-        let team_ids = get_all_team_ids(&self.pool)
-            .await
-            .map_err(|e| ScraperError::DatabaseError(e))?;
+        let team_ids = get_all_team_ids(&self.pool).await?;
 
-        let team_id_chunks: Vec<_> = team_ids.chunks(100).map(|c| c.to_vec()).collect();
-        let mut all_teams = Vec::with_capacity(team_ids.len());
-
-        for chunk in team_id_chunks {
-            let futures: Vec<_> = chunk
+        let mut stream = futures::stream::iter(
+            team_ids
                 .into_iter()
-                .map(|team_id| TeamsScraper::process_teams_request(self.client.clone(), team_id))
-                .collect();
-            let results = futures::future::join_all(futures).await;
+                .map(|team_id| TeamsScraper::process_teams_request(self.client.clone(), team_id)),
+        )
+        .buffer_unordered(20);
 
-            let teams = results.into_iter().collect::<Result<Vec<_>, _>>()?;
+        let batch_size = 1000;
+        let mut teams_batch = Vec::with_capacity(batch_size);
+        let mut total_teams_processed = 0;
+        let mut error_count = 0;
 
-            all_teams.extend(teams);
+        while let Some(result) = stream.next().await {
+            match result {
+                Ok(team) => {
+                    teams_batch.push(team);
+                    if teams_batch.len() >= batch_size {
+                        upsert_teams(&self.pool, &teams_batch).await?;
+                        total_teams_processed += teams_batch.len();
+                        teams_batch.clear();
+                    }
+                }
+                Err(e) => {
+                    error!("Failed to process team {}", e);
+                    error_count += 1;
+                }
+            }
         }
 
-        upsert_teams(&self.pool, &all_teams).await?;
+        if !teams_batch.is_empty() {
+            upsert_teams(&self.pool, &teams_batch).await?;
+            total_teams_processed += teams_batch.len();
+        }
 
         debug!(
-            "[{}] Got {} teams from the API. Converted to {} Team rows for upsertion.",
+            "[{}] Successfully processed {} teams ({} errors)",
             self.name(),
-            all_teams.len(),
-            all_teams.len()
+            total_teams_processed,
+            error_count
         );
 
         *self.last_scrape.write().await = Some(SystemTime::now());

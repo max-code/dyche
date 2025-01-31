@@ -3,14 +3,14 @@ use crate::models::{
     TeamGameWeekAutomaticSub,
 };
 use sqlx::PgPool;
-use tracing::{debug, info};
+use tracing::debug;
 
 pub async fn upsert_team_game_week(
     pool: &PgPool,
     team_game_week: &TeamGameWeek,
 ) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await?;
-    info!("Upserting TeamGameWeek row");
+    debug!("Upserting TeamGameWeek row");
 
     sqlx::query!(
         r#"
@@ -57,12 +57,65 @@ pub async fn upsert_team_game_week(
     Ok(())
 }
 
+pub async fn upsert_team_game_weeks(
+    pool: &PgPool,
+    team_game_weeks: &[TeamGameWeek],
+) -> Result<(), sqlx::Error> {
+    let mut tx = pool.begin().await?;
+    debug!("Upserting TeamGameWeek rowr");
+
+    for row in team_game_weeks {
+        sqlx::query!(
+            r#"
+        INSERT INTO team_game_weeks (
+            team_id, game_week_id, active_chip, points, total_points, rank,
+            rank_sort, overall_rank, percentile_rank, bank, value,
+            event_transfers, event_transfers_cost, points_on_bench
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        ON CONFLICT (team_id, game_week_id) DO UPDATE SET
+            active_chip = EXCLUDED.active_chip,
+            points = EXCLUDED.points,
+            total_points = EXCLUDED.total_points,
+            rank = EXCLUDED.rank,
+            rank_sort = EXCLUDED.rank_sort,
+            overall_rank = EXCLUDED.overall_rank,
+            percentile_rank = EXCLUDED.percentile_rank,
+            bank = EXCLUDED.bank,
+            value = EXCLUDED.value,
+            event_transfers = EXCLUDED.event_transfers,
+            event_transfers_cost = EXCLUDED.event_transfers_cost,
+            points_on_bench = EXCLUDED.points_on_bench
+        "#,
+            i32::from(row.team_id),
+            i16::from(row.game_week_id),
+            row.active_chip,
+            row.points,
+            row.total_points,
+            row.rank,
+            row.rank_sort,
+            row.overall_rank,
+            row.percentile_rank,
+            row.bank,
+            row.value,
+            row.event_transfers,
+            row.event_transfers_cost,
+            row.points_on_bench,
+        )
+        .execute(&mut *tx)
+        .await?;
+    }
+    debug!("Upsert Completed");
+    tx.commit().await?;
+    Ok(())
+}
+
 pub async fn upsert_team_game_week_picks(
     pool: &PgPool,
     picks: &[TeamGameWeekPick],
 ) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await?;
-    info!("Upserting {} TeamGameWeekPick rows", picks.len());
+    debug!("Upserting {} TeamGameWeekPick rows", picks.len());
 
     for pick in picks {
         sqlx::query!(
@@ -101,7 +154,7 @@ pub async fn upsert_team_game_week_automatic_subs(
     subs: &[TeamGameWeekAutomaticSub],
 ) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await?;
-    info!("Upserting {} TeamGameWeekAutomaticSub rows", subs.len());
+    debug!("Upserting {} TeamGameWeekAutomaticSub rows", subs.len());
 
     for sub in subs {
         sqlx::query!(

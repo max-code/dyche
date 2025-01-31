@@ -4,7 +4,7 @@ use crate::error::ScraperError;
 use async_trait::async_trait;
 use strum::{EnumIter, IntoEnumIterator};
 use tokio::time;
-use tracing::{debug, error, info, instrument, trace, warn};
+use tracing::{error, info, instrument, trace, warn};
 
 #[derive(Debug, Eq, PartialEq, Hash, Clone, Copy, PartialOrd, Ord, EnumIter)]
 pub enum ScraperOrder {
@@ -58,20 +58,19 @@ impl ScraperManager {
     }
 
     #[instrument(skip(self, scraper))]
-    pub fn register_scraper<S>(&mut self, order: ScraperOrder, scraper: S)
+    pub fn register_scraper<S>(&mut self, scraper: S)
     where
         S: Scraper + 'static,
     {
         info!(
             "Registering scraper {} with order {:?}",
             scraper.name(),
-            order
+            scraper.position()
         );
         self.scrapers
-            .entry(order)
+            .entry(scraper.position())
             .or_insert_with(Vec::new)
             .push(Box::new(scraper));
-        debug!("Current scraper count: {}", self.scrapers.len());
     }
 
     #[instrument(skip(self))]
@@ -82,7 +81,7 @@ impl ScraperManager {
             interval.tick().await;
             trace!("Scrapers Tick");
             match self.process_all_scrapers().await {
-                Ok(_) => debug!("All scrapers completed successfully"),
+                Ok(_) => info!("All scrapers completed successfully"),
                 Err(errors) => {
                     error!(
                         "Failed to process scrapers. {} errors occurred",
