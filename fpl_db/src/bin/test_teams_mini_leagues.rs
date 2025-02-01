@@ -50,7 +50,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut mini_league_standings = vec![];
 
     for mini_league in user_league_ids {
-        let request = MiniLeagueRequest::new(mini_league);
+        let request = MiniLeagueRequest::new(mini_league, 1);
 
         let api_start = Instant::now();
         let mini_league_response = client.get(request).await.unwrap();

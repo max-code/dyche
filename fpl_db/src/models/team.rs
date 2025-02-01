@@ -17,7 +17,7 @@ pub struct Team {
     pub summary_overall_points: i16,
     pub summary_overall_rank: i32,
     pub summary_event_points: i16,
-    pub summary_event_rank: i32,
+    pub summary_event_rank: Option<i32>,
     pub current_event: i16,
     pub name: String,
     pub name_change_blocked: bool,

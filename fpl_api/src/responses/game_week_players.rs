@@ -4,6 +4,13 @@ use super::string_to_f32;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub enum GameWeekPlayersStatsResponseWrapper {
+    Success(GameWeekPlayersStatsResponse),
+    PlainText(String),
+}
+
+#[derive(Debug, Deserialize)]
 pub struct GameWeekPlayersStatsResponse {
     pub elements: Vec<GameWeekPlayer>,
     pub game_week: Option<GameWeekId>,

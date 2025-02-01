@@ -10,6 +10,7 @@ pub enum PlayerPosition {
     Defender,
     Midfielder,
     Attacker,
+    Manager,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -23,6 +24,7 @@ impl PlayerPosition {
             PlayerPosition::Defender => 2,
             PlayerPosition::Midfielder => 3,
             PlayerPosition::Attacker => 4,
+            PlayerPosition::Manager => 5,
         }
     }
 
@@ -32,6 +34,7 @@ impl PlayerPosition {
             Self::Defender => "Defender",
             Self::Midfielder => "Midfielder",
             Self::Attacker => "Attacker",
+            Self::Manager => "Manager",
         }
     }
 
@@ -41,6 +44,7 @@ impl PlayerPosition {
             Self::Defender => "DEF",
             Self::Midfielder => "MID",
             Self::Attacker => "FWD",
+            Self::Manager => "MGR",
         }
     }
 }
@@ -60,6 +64,7 @@ impl FromStr for PlayerPosition {
             "defender" | "def" => Ok(Self::Defender),
             "midfielder" | "mid" => Ok(Self::Midfielder),
             "attacker" | "fwd" | "forward" => Ok(Self::Attacker),
+            "manager" | "mgr" | "assman" => Ok(Self::Manager),
             _ => Err(ParsePositionError(s.to_owned())),
         }
     }
@@ -74,6 +79,7 @@ impl TryFrom<i16> for PlayerPosition {
             2 => Ok(Self::Defender),
             3 => Ok(Self::Midfielder),
             4 => Ok(Self::Attacker),
+            5 => Ok(Self::Manager),
             _ => Err(ParsePositionError(format!(
                 "Invalid position number: {}",
                 value

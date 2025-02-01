@@ -1,3 +1,4 @@
+use fpl_common::types::LeagueId;
 use sqlx::PgPool;
 use tracing::debug;
 
@@ -86,4 +87,15 @@ pub async fn upsert_mini_league_standings(
     tx.commit().await?;
     debug!("Upsert Completed");
     Ok(())
+}
+
+pub async fn get_all_mini_league_ids(pool: &PgPool) -> Result<Vec<LeagueId>, sqlx::Error> {
+    let ids = sqlx::query!("SELECT id FROM mini_leagues")
+        .fetch_all(pool)
+        .await?
+        .into_iter()
+        .map(|row| LeagueId::from(row.id))
+        .collect();
+
+    Ok(ids)
 }

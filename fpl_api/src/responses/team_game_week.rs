@@ -2,6 +2,19 @@ use fpl_common::types::{Chip, GameWeekId, PlayerId, PlayerPosition, TeamId};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub enum TeamGameWeekResponseWrapper {
+    Success(TeamGameWeekResponse),
+    Error(ErrorResponse),
+    PlainText(String),
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ErrorResponse {
+    pub detail: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct TeamGameWeekResponse {
     pub active_chip: Option<Chip>,
     pub automatic_subs: Vec<AutomaticSub>,
@@ -16,10 +29,10 @@ pub struct EntryHistory {
     pub event: GameWeekId,
     pub points: i16,
     pub total_points: i16,
-    pub rank: i32,
-    pub rank_sort: i32,
+    pub rank: Option<i32>,
+    pub rank_sort: Option<i32>,
     pub overall_rank: i32,
-    pub percentile_rank: i16,
+    pub percentile_rank: Option<i16>,
     pub bank: i16,
     pub value: i16,
     pub event_transfers: i16,

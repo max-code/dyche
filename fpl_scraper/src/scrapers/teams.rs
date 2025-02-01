@@ -9,7 +9,7 @@ use futures::StreamExt;
 use sqlx::PgPool;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, error, info};
+use tracing::{debug, info, warn};
 
 use fpl_api::requests::TeamRequest;
 use fpl_api::FplClient;
@@ -102,7 +102,7 @@ impl Scraper for TeamsScraper {
                     }
                 }
                 Err(e) => {
-                    error!("Failed to process team {}", e);
+                    warn!("Failed to process team {}", e);
                     error_count += 1;
                 }
             }

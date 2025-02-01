@@ -14,6 +14,8 @@ pub enum Chip {
     TripleCaptain,
     #[serde(rename = "bboost")]
     BenchBoost,
+    #[serde(rename = "manager")]
+    AssMan,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -21,11 +23,12 @@ pub enum Chip {
 pub struct ParseChipError(String);
 
 impl Chip {
-    pub const ALL: [Chip; 4] = [
+    pub const ALL: [Chip; 5] = [
         Chip::WildCard,
         Chip::FreeHit,
         Chip::TripleCaptain,
         Chip::BenchBoost,
+        Chip::AssMan,
     ];
 
     pub fn as_str(&self) -> &'static str {
@@ -34,6 +37,7 @@ impl Chip {
             Self::FreeHit => "freehit",
             Self::TripleCaptain => "3xc",
             Self::BenchBoost => "bboost",
+            Self::AssMan => "manager",
         }
     }
 }
@@ -53,6 +57,7 @@ impl FromStr for Chip {
             "wildcard" => Ok(Self::WildCard),
             "3xc" => Ok(Self::TripleCaptain),
             "bboost" => Ok(Self::BenchBoost),
+            "manager" => Ok(Self::AssMan),
             _ => Err(ParseChipError(s.to_owned())),
         }
     }

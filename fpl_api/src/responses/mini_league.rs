@@ -3,6 +3,13 @@ use fpl_common::types::{GameWeekId, LeagueId, TeamId};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub enum MiniLeagueResponseWrapper {
+    Success(MiniLeagueResponse),
+    PlainText(String),
+}
+
+#[derive(Debug, Deserialize)]
 pub struct MiniLeagueResponse {
     pub last_updated_data: DateTime<Utc>,
     pub league: League,
@@ -33,7 +40,7 @@ pub struct Standings {
     pub results: Vec<Standing>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Standing {
     pub id: i32,
     pub event_total: i16,

@@ -14,7 +14,7 @@ use futures::StreamExt;
 use sqlx::PgPool;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 use fpl_api::requests::TeamGameWeekRequest;
 use fpl_api::{FplClient, FplClientError};
@@ -86,58 +86,65 @@ impl Scraper for TeamGameWeekScraper {
     async fn scrape(&self) -> Result<(), ScraperError> {
         let current_game_week = get_current_game_week(&self.pool).await?;
         let team_ids = get_all_team_ids(&self.pool).await?;
+        let chunk_size = 100;
 
-        for chunk in team_ids.chunks(100) {
-            let chunk = chunk.to_vec();
-            let current_game_week_id = current_game_week.id;
+        for game_week_id in GameWeekId::weeks_range_iter(1, i16::from(current_game_week.id)) {
+            for chunk in team_ids.chunks(chunk_size) {
+                let chunk = chunk.to_vec();
 
-            let mut stream = futures::stream::iter(chunk.into_iter().map(|team_id| {
-                TeamGameWeekScraper::process_team_game_week(
-                    self.client.clone(),
-                    team_id,
-                    current_game_week_id,
-                )
-            }))
-            .buffer_unordered(20);
+                let mut stream = futures::stream::iter(chunk.into_iter().map(|team_id| {
+                    TeamGameWeekScraper::process_team_game_week(
+                        self.client.clone(),
+                        team_id,
+                        game_week_id,
+                    )
+                }))
+                .buffer_unordered(20);
 
-            let mut game_week_picks = Vec::with_capacity(team_ids.len() * 15);
-            let mut game_week_automatic_subs = Vec::with_capacity(team_ids.len() * 4);
-            let mut team_game_weeks = Vec::with_capacity(team_ids.len());
+                let mut game_week_picks = Vec::with_capacity(chunk_size * 15);
+                let mut game_week_automatic_subs = Vec::with_capacity(chunk_size * 4);
+                let mut team_game_weeks = Vec::with_capacity(chunk_size);
 
-            while let Some(result) = stream.next().await {
-                let response = result?;
-                let team_id = response.team_id.ok_or(ScraperError::FplApiError(
-                    FplClientError::MissingExtraDetailError,
-                ))?;
-                let game_week_id = response.game_week_id.ok_or(ScraperError::FplApiError(
-                    FplClientError::MissingExtraDetailError,
-                ))?;
+                while let Some(result) = stream.next().await {
+                    let response = match result {
+                        Ok(response) => response,
+                        Err(e) => {
+                            warn!("{}", e);
+                            continue;
+                        }
+                    };
+                    let team_id = response.team_id.ok_or(ScraperError::FplApiError(
+                        FplClientError::MissingExtraDetailError,
+                    ))?;
+                    let game_week_id = response.game_week_id.ok_or(ScraperError::FplApiError(
+                        FplClientError::MissingExtraDetailError,
+                    ))?;
 
-                game_week_picks.extend(
-                    response
-                        .picks
-                        .iter()
-                        .map(|pick| (team_id, game_week_id, pick).into()),
+                    game_week_picks.extend(
+                        response
+                            .picks
+                            .iter()
+                            .map(|pick| (team_id, game_week_id, pick).into()),
+                    );
+
+                    game_week_automatic_subs
+                        .extend(response.automatic_subs.iter().map(|sub| sub.into()));
+
+                    team_game_weeks.push((team_id, game_week_id, &response).into());
+                }
+                println!()
+                upsert_team_game_weeks(&self.pool, &team_game_weeks).await?;
+                upsert_team_game_week_picks(&self.pool, &game_week_picks).await?;
+                upsert_team_game_week_automatic_subs(&self.pool, &game_week_automatic_subs).await?;
+
+                info!(
+                    "[{}] Processed {} teams for week {}",
+                    self.name(),
+                    team_game_weeks.len(),
+                    game_week_id
                 );
-
-                game_week_automatic_subs
-                    .extend(response.automatic_subs.iter().map(|sub| sub.into()));
-
-                team_game_weeks.push((team_id, game_week_id, &response).into());
             }
-
-            upsert_team_game_weeks(&self.pool, &team_game_weeks).await?;
-            upsert_team_game_week_picks(&self.pool, &game_week_picks).await?;
-            upsert_team_game_week_automatic_subs(&self.pool, &game_week_automatic_subs).await?;
-
-            debug!(
-                "[{}] Processed {} teams for week {}",
-                self.name(),
-                team_game_weeks.len(),
-                current_game_week.id
-            );
         }
-
         *self.last_scrape.write().await = Some(SystemTime::now());
         Ok(())
     }

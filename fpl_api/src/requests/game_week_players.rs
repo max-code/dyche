@@ -1,5 +1,7 @@
 use super::FplRequest;
-use crate::responses::game_week_players::GameWeekPlayersStatsResponse;
+use crate::responses::game_week_players::{
+    GameWeekPlayersStatsResponse, GameWeekPlayersStatsResponseWrapper,
+};
 use fpl_common::types::GameWeekId;
 
 #[derive(Debug)]
@@ -24,8 +26,16 @@ impl FplRequest for GameWeekPlayersRequest {
         &self,
         response: serde_json::Value,
     ) -> Result<Self::Response, serde_json::Error> {
-        let mut resp: GameWeekPlayersStatsResponse = serde_json::from_value(response)?;
-        resp.game_week = Some(self.game_week);
-        Ok(resp)
+        let wrapper: GameWeekPlayersStatsResponseWrapper = serde_json::from_value(response)?;
+
+        match wrapper {
+            GameWeekPlayersStatsResponseWrapper::Success(mut response) => {
+                response.game_week = Some(self.game_week);
+                Ok(response)
+            }
+            GameWeekPlayersStatsResponseWrapper::PlainText(message) => {
+                Err(serde::de::Error::custom(message))
+            }
+        }
     }
 }

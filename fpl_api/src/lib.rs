@@ -18,15 +18,15 @@ pub enum FplClientError {
         url: String,
         message: String,
     },
-    #[error("JSON parsing error (status: {1}): {0}")]
-    JsonError(serde_json::Error, reqwest::StatusCode),
+    #[error("JSON parsing error (status: {0}, url: {1}): {2}")]
+    JsonError(reqwest::StatusCode, String, serde_json::Error),
     #[error("Response body missing extra detail that should have been added in process_response.")]
     MissingExtraDetailError,
 }
 
-impl From<(serde_json::Error, reqwest::StatusCode)> for FplClientError {
-    fn from((error, status): (serde_json::Error, reqwest::StatusCode)) -> Self {
-        Self::JsonError(error, status)
+impl From<(reqwest::StatusCode, &String, serde_json::Error)> for FplClientError {
+    fn from((status, url, error): (reqwest::StatusCode, &String, serde_json::Error)) -> Self {
+        Self::JsonError(status, url.clone(), error)
     }
 }
 
@@ -74,10 +74,10 @@ impl FplClient {
         let response = self.client.get(&url).send().await?;
         let status = response.status();
         let body = response.text().await?;
-        let value: Value = serde_json::from_str(&body).map_err(|e| (e, status))?;
+        let value: Value = serde_json::from_str(&body).map_err(|e| (status, &url, e))?;
         request
             .process_response(value)
-            .map_err(|e| (e, status).into())
+            .map_err(|e| (status, &url, e).into())
     }
 }
 
@@ -93,6 +93,12 @@ mod tests {
     use super::*;
     use crate::requests::TeamGameWeekRequest;
     use crate::requests::TeamRequest;
+
+    fn setup_tracing() {
+        tracing_subscriber::fmt()
+            .with_max_level(tracing::Level::DEBUG)
+            .init();
+    }
 
     #[tokio::test]
     async fn test_team_request() {
@@ -121,10 +127,11 @@ mod tests {
     #[tokio::test]
     async fn test_mini_league_request() {
         // Arrange
+        setup_tracing();
         let client = FplClient::new();
 
         // Act
-        let request = MiniLeagueRequest::new(LeagueId::new(550971));
+        let request = MiniLeagueRequest::new(LeagueId::new(577969), 1);
         let response = client.get(request).await.unwrap();
 
         // Assert
@@ -198,6 +205,6 @@ mod tests {
         let response = client.get(request).await.unwrap();
 
         // Assert
-        // println!("Response: {:#?}", response);
+        println!("Response: {:#?}", response);
     }
 }

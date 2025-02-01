@@ -6,10 +6,11 @@ use crate::NoScrapeReason;
 use async_trait::async_trait;
 use fpl_db::models::GameWeekPlayerDb;
 use fpl_db::queries::game_week_player::upsert_game_week_players;
+use futures::StreamExt;
 use sqlx::PgPool;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 use fpl_api::requests::GameWeekPlayersRequest;
 use fpl_api::FplClient;
@@ -82,24 +83,21 @@ impl Scraper for GameWeekPlayersScraper {
     }
 
     async fn scrape(&self) -> Result<(), ScraperError> {
-        let futures: Vec<_> = GameWeekId::all_weeks_iter()
-            .map(|game_week_id| {
-                GameWeekPlayersScraper::process_game_week_players(self.client.clone(), game_week_id)
-            })
-            .collect();
-        let results = futures::future::join_all(futures).await;
+        let mut stream = futures::stream::iter(GameWeekId::all_weeks_iter().map(|game_week_id| {
+            GameWeekPlayersScraper::process_game_week_players(self.client.clone(), game_week_id)
+        }))
+        .buffer_unordered(20);
 
-        let game_week_players = results.into_iter().collect::<Result<Vec<_>, _>>()?;
+        while let Some(result) = stream.next().await {
+            let response = match result {
+                Ok(response) => response,
+                Err(e) => {
+                    warn!("{}", e);
+                    continue;
+                }
+            };
 
-        for (idx, week) in game_week_players.into_iter().enumerate() {
-            upsert_game_week_players(&self.pool, &week).await?;
-            debug!(
-                "[{}] Got {} players from the API for the week {}. Converted to {} GameWeekPlayerDb rows for upsertion.",
-                self.name(),
-                week.len(),
-                idx + 1,
-                week.len()
-            );
+            upsert_game_week_players(&self.pool, &response).await?;
         }
 
         *self.last_scrape.write().await = Some(SystemTime::now());

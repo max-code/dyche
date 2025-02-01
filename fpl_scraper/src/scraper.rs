@@ -93,6 +93,7 @@ impl ScraperManager {
     }
 
     async fn process_all_scrapers(&self) -> ScraperResult {
+        let mut all_errors = Vec::new();
         for order in ScraperOrder::iter() {
             if let Some(scrapers) = self.scrapers.get(&order) {
                 let names = scrapers
@@ -130,11 +131,16 @@ impl ScraperManager {
                             });
                         error!("Scraper {scraper_name} failed:\n\n\tError: {error}\n");
                     }
-                    return Err(errors);
+                    all_errors.extend(errors);
                 }
             }
         }
-        Ok(())
+
+        if all_errors.is_empty() {
+            return Ok(());
+        }
+
+        Err(all_errors)
     }
 
     async fn handle_scraper(
