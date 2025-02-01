@@ -6,7 +6,7 @@ use fpl_scraper::{
     fixtures::FixturesScraper, game_state::GameStateScraper,
     game_week_players::GameWeekPlayersScraper, mini_leagues::MiniLeaguesScraper,
     players::PlayersScraper, team_game_weeks::TeamGameWeekScraper, teams::TeamsScraper,
-    ScraperManager,
+    transfers::TransfersScraper, ScraperManager,
 };
 use sqlx::PgPool;
 use tracing::info;
@@ -57,6 +57,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mini_league_scraper =
         MiniLeaguesScraper::new(Arc::clone(&pool), Arc::clone(&client), five_minutes);
     manager.register_scraper(mini_league_scraper);
+
+    let transfers_scraper =
+        TransfersScraper::new(Arc::clone(&pool), Arc::clone(&client), five_minutes);
+    manager.register_scraper(transfers_scraper);
 
     manager.run().await;
     Ok(())

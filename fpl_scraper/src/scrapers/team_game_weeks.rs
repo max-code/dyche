@@ -132,12 +132,11 @@ impl Scraper for TeamGameWeekScraper {
 
                     team_game_weeks.push((team_id, game_week_id, &response).into());
                 }
-                println!()
                 upsert_team_game_weeks(&self.pool, &team_game_weeks).await?;
                 upsert_team_game_week_picks(&self.pool, &game_week_picks).await?;
                 upsert_team_game_week_automatic_subs(&self.pool, &game_week_automatic_subs).await?;
 
-                info!(
+                debug!(
                     "[{}] Processed {} teams for week {}",
                     self.name(),
                     team_game_weeks.len(),
