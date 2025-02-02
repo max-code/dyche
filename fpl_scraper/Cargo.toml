@@ -13,7 +13,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 sqlx = { workspace = true }
-async-trait = "0.1.85"
+async-trait = { workspace = true }
 tracing = { workspace = true }
 fpl_common = { path = "../fpl_common" }
 fpl_api = { path = "../fpl_api" }

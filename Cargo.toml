@@ -1,5 +1,5 @@
 [workspace]
-members = ["fpl_api", "fpl_common", "fpl_db", "fpl_scraper"]
+members = ["fpl_api", "fpl_bot", "fpl_common", "fpl_db", "fpl_scraper"]
 resolver = "2"
 
 [workspace.dependencies]
@@ -19,3 +19,4 @@ reqwest = { version = "0.12.12", features = ["json"] }
 dotenv = "0.15.0"
 tracing = "0.1.41"
 governor = "0.8.0"
+async-trait = "0.1.85"
