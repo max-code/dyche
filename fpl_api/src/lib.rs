@@ -15,7 +15,7 @@ use thiserror::Error;
 use tracing::debug;
 
 pub const REQ_TIMEOUT_SECONDS: u64 = 30;
-const REQUESTS_PER_SECOND: u32 = 50;
+const REQUESTS_PER_SECOND: u32 = 500;
 
 #[derive(Error, Debug)]
 pub enum FplClientError {
@@ -93,6 +93,14 @@ impl FplClient {
         request
             .process_response(value)
             .map_err(|e| (status, &url, e).into())
+    }
+
+    pub fn get_rate_limit_state(&self) -> String {
+        format!(
+            "Rate limit: {:?}/{} requests remaining this second",
+            self.rate_limiter.check(),
+            REQUESTS_PER_SECOND
+        )
     }
 }
 

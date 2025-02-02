@@ -1,14 +1,10 @@
-use std::{
-    collections::HashMap,
-    sync::atomic::{AtomicBool, Ordering},
-    time::Duration,
-};
+use std::{collections::HashMap, time::Duration};
 
 use crate::error::ScraperError;
 use async_trait::async_trait;
 use strum::{EnumIter, IntoEnumIterator};
 use tokio::time;
-use tracing::{debug, error, info, instrument, trace, warn};
+use tracing::{error, info, instrument, trace, warn};
 
 #[derive(Debug, Eq, PartialEq, Hash, Clone, Copy, PartialOrd, Ord, EnumIter)]
 pub enum ScraperOrder {
@@ -50,7 +46,6 @@ pub trait Scraper: Send + Sync {
 
 pub struct ScraperManager {
     scrapers: HashMap<ScraperOrder, Vec<Box<dyn Scraper>>>,
-    first_run: AtomicBool,
 }
 type ScraperResult = Result<(), Vec<(usize, ScraperError)>>;
 
@@ -60,7 +55,6 @@ impl ScraperManager {
         info!("Initializing ScraperManager");
         Self {
             scrapers: HashMap::default(),
-            first_run: AtomicBool::new(true),
         }
     }
 
@@ -102,7 +96,6 @@ impl ScraperManager {
 
     async fn process_all_scrapers(&self) -> ScraperResult {
         let mut all_errors = Vec::new();
-        let is_first_run = self.first_run.load(Ordering::Acquire);
 
         info!("Processing first run with sequential scrapers and delays");
         for order in ScraperOrder::iter() {
@@ -119,26 +112,33 @@ impl ScraperManager {
                     names.join(", ")
                 );
 
-                for (idx, scraper) in scrapers.iter().enumerate() {
-                    let result = self.handle_scraper(scraper, order).await;
-                    if let Err(e) = result {
-                        error!("Scraper {} failed:\n\n\tError: {e}\n", scraper.name());
-                        all_errors.push((idx, e));
-                    }
+                let scraper_futures: Vec<_> = scrapers
+                    .iter()
+                    .map(|scraper| self.handle_scraper(scraper, order))
+                    .collect();
 
-                    // Add 0.5s delay after each scraper except the last one
-                    // for the first run. Helps avoid 429s.
-                    if is_first_run && idx < scrapers.len() - 1 {
-                        debug!(
-                            "Adding delay after scraper {} on first run.",
-                            scraper.name()
-                        );
-                        time::sleep(Duration::from_millis(500)).await;
+                let results = futures::future::join_all(scraper_futures).await;
+
+                // Collect errors from this bucket
+                let errors: Vec<_> = results
+                    .into_iter()
+                    .enumerate()
+                    .filter_map(|(idx, res)| res.err().map(|e| (idx, e)))
+                    .collect();
+
+                if !errors.is_empty() {
+                    for (idx, error) in &errors {
+                        let scraper_name =
+                            scrapers.get(*idx).map(|s| s.name()).unwrap_or_else(|| {
+                                warn!("Scraper index {} not found", idx);
+                                "Unknown scraper"
+                            });
+                        error!("Scraper {scraper_name} failed:\n\n\tError: {error}\n");
                     }
+                    all_errors.extend(errors);
                 }
             }
         }
-        self.first_run.store(false, Ordering::Release);
 
         if all_errors.is_empty() {
             Ok(())
