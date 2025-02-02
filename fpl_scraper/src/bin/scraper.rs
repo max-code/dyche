@@ -27,39 +27,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut manager = ScraperManager::new();
 
-    let five_minutes = Duration::from_secs(300);
+    let one_minute = Duration::from_secs(60);
+    let five_minutes = Duration::from_secs(60 * 5);
+    let thirty_minutes = Duration::from_secs(60 * 30);
+    let one_hour = Duration::from_secs(60 * 60);
 
     // First
     let game_state_scraper =
-        GameStateScraper::new(Arc::clone(&pool), Arc::clone(&client), five_minutes);
+        GameStateScraper::new(Arc::clone(&pool), Arc::clone(&client), one_minute);
     manager.register_scraper(game_state_scraper);
 
     // Second
-    let fixtures_scraper =
-        FixturesScraper::new(Arc::clone(&pool), Arc::clone(&client), five_minutes);
+    let fixtures_scraper = FixturesScraper::new(Arc::clone(&pool), Arc::clone(&client), one_hour);
     manager.register_scraper(fixtures_scraper);
 
     let teams_scraper = TeamsScraper::new(Arc::clone(&pool), Arc::clone(&client), five_minutes);
     manager.register_scraper(teams_scraper);
 
     let game_week_players_scraper =
-        GameWeekPlayersScraper::new(Arc::clone(&pool), Arc::clone(&client), five_minutes);
+        GameWeekPlayersScraper::new(Arc::clone(&pool), Arc::clone(&client), one_minute);
     manager.register_scraper(game_week_players_scraper);
 
     // Third
-    let player_scraper = PlayersScraper::new(Arc::clone(&pool), Arc::clone(&client), five_minutes);
+    let player_scraper = PlayersScraper::new(Arc::clone(&pool), Arc::clone(&client), one_minute);
     manager.register_scraper(player_scraper);
 
     let team_game_week_scraper =
-        TeamGameWeekScraper::new(Arc::clone(&pool), Arc::clone(&client), five_minutes);
+        TeamGameWeekScraper::new(Arc::clone(&pool), Arc::clone(&client), thirty_minutes);
     manager.register_scraper(team_game_week_scraper);
 
     let mini_league_scraper =
-        MiniLeaguesScraper::new(Arc::clone(&pool), Arc::clone(&client), five_minutes);
+        MiniLeaguesScraper::new(Arc::clone(&pool), Arc::clone(&client), thirty_minutes);
     manager.register_scraper(mini_league_scraper);
 
     let transfers_scraper =
-        TransfersScraper::new(Arc::clone(&pool), Arc::clone(&client), five_minutes);
+        TransfersScraper::new(Arc::clone(&pool), Arc::clone(&client), thirty_minutes);
     manager.register_scraper(transfers_scraper);
 
     manager.run().await;

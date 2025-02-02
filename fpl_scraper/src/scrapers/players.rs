@@ -8,10 +8,11 @@ use fpl_db::models::{PlayerFixtureDb, PlayerHistoryDb, PlayerHistoryPastDb};
 use fpl_db::queries::player::{
     get_all_player_ids, upsert_player_fixtures, upsert_player_histories, upsert_player_history_past,
 };
+use futures::StreamExt;
 use sqlx::PgPool;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 use fpl_api::requests::PlayerRequest;
 use fpl_api::FplClient;
@@ -36,10 +37,16 @@ impl PlayersScraper {
     }
 
     async fn process_player(
-        pool: Arc<PgPool>,
         client: Arc<FplClient>,
         player_id: PlayerId,
-    ) -> Result<(), ScraperError> {
+    ) -> Result<
+        (
+            Vec<PlayerFixtureDb>,
+            Vec<PlayerHistoryDb>,
+            Vec<PlayerHistoryPastDb>,
+        ),
+        ScraperError,
+    > {
         let player = client.get(PlayerRequest::new(player_id)).await?;
 
         // Process fixtures
@@ -48,11 +55,9 @@ impl PlayersScraper {
             .iter()
             .map(|f| (player_id, f).into())
             .collect();
-        upsert_player_fixtures(&pool, &fixtures).await?;
 
         // Process history
         let history: Vec<PlayerHistoryDb> = player.history.iter().map(|h| h.into()).collect();
-        upsert_player_histories(&pool, &history).await?;
 
         // Process history past
         let history_past: Vec<PlayerHistoryPastDb> = player
@@ -60,9 +65,8 @@ impl PlayersScraper {
             .iter()
             .map(|f| (player_id, f).into())
             .collect();
-        upsert_player_history_past(&pool, &history_past).await?;
 
-        Ok(())
+        Ok((fixtures, history, history_past))
     }
 }
 
@@ -101,26 +105,39 @@ impl Scraper for PlayersScraper {
 
     async fn scrape(&self) -> Result<(), ScraperError> {
         let all_player_ids = get_all_player_ids(&self.pool).await?;
+        let chunk_size = 100;
 
-        let player_chunks: Vec<_> = all_player_ids
-            .iter()
-            .collect::<Vec<_>>()
-            .chunks(100)
-            .map(|c| c.to_vec())
-            .collect();
+        for chunk in all_player_ids.chunks(chunk_size) {
+            let chunk = chunk.to_vec();
 
-        for chunk in player_chunks {
-            let futures: Vec<_> = chunk
-                .into_iter()
-                .map(|&player_id| {
-                    PlayersScraper::process_player(
-                        Arc::clone(&self.pool),
-                        Arc::clone(&self.client),
-                        player_id,
-                    )
-                })
-                .collect();
-            futures::future::join_all(futures).await;
+            let mut stream = futures::stream::iter(chunk.into_iter().map(|player_id| {
+                PlayersScraper::process_player(Arc::clone(&self.client), player_id)
+            }))
+            .buffer_unordered(5);
+
+            let mut player_fixtures = Vec::new();
+            let mut player_history = Vec::new();
+            let mut player_history_past = Vec::new();
+
+            while let Some(result) = stream.next().await {
+                let response = match result {
+                    Ok(response) => response,
+                    Err(e) => {
+                        warn!("{}", e);
+                        continue;
+                    }
+                };
+
+                let (fixtures, history, history_past) = response;
+
+                player_fixtures.extend(fixtures);
+                player_history.extend(history);
+                player_history_past.extend(history_past);
+            }
+
+            upsert_player_fixtures(&self.pool, &player_fixtures).await?;
+            upsert_player_histories(&self.pool, &player_history).await?;
+            upsert_player_history_past(&self.pool, &player_history_past).await?;
         }
 
         debug!(

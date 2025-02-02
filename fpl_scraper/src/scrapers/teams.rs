@@ -84,7 +84,7 @@ impl Scraper for TeamsScraper {
                 .into_iter()
                 .map(|team_id| TeamsScraper::process_teams_request(self.client.clone(), team_id)),
         )
-        .buffer_unordered(20);
+        .buffer_unordered(5);
 
         let batch_size = 1000;
         let mut teams_batch = Vec::with_capacity(batch_size);

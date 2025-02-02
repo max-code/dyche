@@ -5,6 +5,7 @@ use crate::scraper::{Scraper, ScraperOrder, ShouldScrape};
 use crate::NoScrapeReason;
 use async_trait::async_trait;
 use fpl_db::models::GameWeekPlayerDb;
+use fpl_db::queries::game_week::get_current_game_week;
 use fpl_db::queries::game_week_player::upsert_game_week_players;
 use futures::StreamExt;
 use sqlx::PgPool;
@@ -83,10 +84,14 @@ impl Scraper for GameWeekPlayersScraper {
     }
 
     async fn scrape(&self) -> Result<(), ScraperError> {
-        let mut stream = futures::stream::iter(GameWeekId::all_weeks_iter().map(|game_week_id| {
-            GameWeekPlayersScraper::process_game_week_players(self.client.clone(), game_week_id)
-        }))
-        .buffer_unordered(20);
+        let current_game_week = get_current_game_week(&self.pool).await?;
+
+        let mut stream = futures::stream::iter(
+            GameWeekId::weeks_range_iter(1, i16::from(current_game_week.id)).map(|game_week_id| {
+                GameWeekPlayersScraper::process_game_week_players(self.client.clone(), game_week_id)
+            }),
+        )
+        .buffer_unordered(5);
 
         while let Some(result) = stream.next().await {
             let response = match result {

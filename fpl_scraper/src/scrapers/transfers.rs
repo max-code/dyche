@@ -86,7 +86,7 @@ impl Scraper for TransfersScraper {
         let mut stream = futures::stream::iter(team_ids.into_iter().map(|team_id| {
             TransfersScraper::process_transfer_request(self.client.clone(), team_id)
         }))
-        .buffer_unordered(20);
+        .buffer_unordered(5);
 
         let batch_size = 5000;
         let mut transfers_batch = Vec::with_capacity(batch_size);
@@ -127,6 +127,6 @@ impl Scraper for TransfersScraper {
     }
 
     fn position(&self) -> ScraperOrder {
-        ScraperOrder::Third
+        ScraperOrder::Fourth
     }
 }

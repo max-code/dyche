@@ -1,14 +1,21 @@
 pub mod requests;
 pub mod responses;
 
+use governor::{
+    clock::DefaultClock,
+    state::{InMemoryState, NotKeyed},
+    Quota, RateLimiter,
+};
 use requests::FplRequest;
 use reqwest::Client;
 use serde_json::Value;
-use std::time::Duration;
+use std::num::NonZeroU32;
+use std::{sync::Arc, time::Duration};
 use thiserror::Error;
 use tracing::debug;
 
 pub const REQ_TIMEOUT_SECONDS: u64 = 30;
+const REQUESTS_PER_SECOND: u32 = 50;
 
 #[derive(Error, Debug)]
 pub enum FplClientError {
@@ -44,6 +51,7 @@ impl From<reqwest::Error> for FplClientError {
 pub struct FplClient {
     client: Client,
     base_url: String,
+    rate_limiter: Arc<RateLimiter<NotKeyed, InMemoryState, DefaultClock>>,
 }
 
 impl Default for FplClient {
@@ -59,9 +67,14 @@ impl FplClient {
             .build()
             .expect("Failed to build FplClient. Reqwest client cant build");
 
+        let rate_limiter = Arc::new(RateLimiter::direct(Quota::per_second(
+            NonZeroU32::new(REQUESTS_PER_SECOND).unwrap(),
+        )));
+
         Self {
             client,
             base_url: "https://fantasy.premierleague.com/api".to_string(),
+            rate_limiter,
         }
     }
 
@@ -69,6 +82,8 @@ impl FplClient {
         &self,
         request: T,
     ) -> Result<T::Response, FplClientError> {
+        self.rate_limiter.until_ready().await;
+
         let url = request.to_url(&self.base_url);
         debug!("Making {:?} with URL {}", request, url);
         let response = self.client.get(&url).send().await?;
@@ -171,7 +186,7 @@ mod tests {
     async fn test_game_week_players_request() {
         // Arrange
         let client = FplClient::new();
-        let gw = GameWeekId::new(25);
+        let gw = GameWeekId::new(24);
         assert!(gw.is_ok(), "GameWeek 20 should be valid.");
 
         // Act

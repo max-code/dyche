@@ -1,16 +1,21 @@
-use std::{collections::HashMap, time::Duration};
+use std::{
+    collections::HashMap,
+    sync::atomic::{AtomicBool, Ordering},
+    time::Duration,
+};
 
 use crate::error::ScraperError;
 use async_trait::async_trait;
 use strum::{EnumIter, IntoEnumIterator};
 use tokio::time;
-use tracing::{error, info, instrument, trace, warn};
+use tracing::{debug, error, info, instrument, trace, warn};
 
 #[derive(Debug, Eq, PartialEq, Hash, Clone, Copy, PartialOrd, Ord, EnumIter)]
 pub enum ScraperOrder {
     First,
     Second,
     Third,
+    Fourth,
 }
 
 #[derive(Debug)]
@@ -45,6 +50,7 @@ pub trait Scraper: Send + Sync {
 
 pub struct ScraperManager {
     scrapers: HashMap<ScraperOrder, Vec<Box<dyn Scraper>>>,
+    first_run: AtomicBool,
 }
 type ScraperResult = Result<(), Vec<(usize, ScraperError)>>;
 
@@ -54,6 +60,7 @@ impl ScraperManager {
         info!("Initializing ScraperManager");
         Self {
             scrapers: HashMap::default(),
+            first_run: AtomicBool::new(true),
         }
     }
 
@@ -79,12 +86,13 @@ impl ScraperManager {
         let mut interval = time::interval(Duration::from_secs(10));
         loop {
             interval.tick().await;
+            info!("ℹ️ Running all scrapers");
             trace!("Scrapers Tick");
             match self.process_all_scrapers().await {
-                Ok(_) => info!("All scrapers completed successfully"),
+                Ok(_) => info!("✅ All scrapers completed successfully"),
                 Err(errors) => {
                     error!(
-                        "Failed to process scrapers. {} errors occurred",
+                        "❌ Failed to process scrapers. {} errors occurred",
                         errors.len()
                     );
                 }
@@ -94,6 +102,9 @@ impl ScraperManager {
 
     async fn process_all_scrapers(&self) -> ScraperResult {
         let mut all_errors = Vec::new();
+        let is_first_run = self.first_run.load(Ordering::Acquire);
+
+        info!("Processing first run with sequential scrapers and delays");
         for order in ScraperOrder::iter() {
             if let Some(scrapers) = self.scrapers.get(&order) {
                 let names = scrapers
@@ -102,45 +113,38 @@ impl ScraperManager {
                     .collect::<Vec<_>>();
 
                 info!(
-                    "[Order {:?}] Processing {} scrapers ({})",
+                    "[📋 {:?}] Processing {} scrapers ({})",
                     order,
                     scrapers.len(),
                     names.join(", ")
                 );
 
-                let scraper_futures: Vec<_> = scrapers
-                    .iter()
-                    .map(|scraper| self.handle_scraper(scraper, order))
-                    .collect();
-
-                let results = futures::future::join_all(scraper_futures).await;
-
-                // Collect errors from this bucket
-                let errors: Vec<_> = results
-                    .into_iter()
-                    .enumerate()
-                    .filter_map(|(idx, res)| res.err().map(|e| (idx, e)))
-                    .collect();
-
-                if !errors.is_empty() {
-                    for (idx, error) in &errors {
-                        let scraper_name =
-                            scrapers.get(*idx).map(|s| s.name()).unwrap_or_else(|| {
-                                warn!("Scraper index {} not found", idx);
-                                "Unknown scraper"
-                            });
-                        error!("Scraper {scraper_name} failed:\n\n\tError: {error}\n");
+                for (idx, scraper) in scrapers.iter().enumerate() {
+                    let result = self.handle_scraper(scraper, order).await;
+                    if let Err(e) = result {
+                        error!("Scraper {} failed:\n\n\tError: {e}\n", scraper.name());
+                        all_errors.push((idx, e));
                     }
-                    all_errors.extend(errors);
+
+                    // Add 0.5s delay after each scraper except the last one
+                    // for the first run. Helps avoid 429s.
+                    if is_first_run && idx < scrapers.len() - 1 {
+                        debug!(
+                            "Adding delay after scraper {} on first run.",
+                            scraper.name()
+                        );
+                        time::sleep(Duration::from_millis(500)).await;
+                    }
                 }
             }
         }
+        self.first_run.store(false, Ordering::Release);
 
         if all_errors.is_empty() {
-            return Ok(());
+            Ok(())
+        } else {
+            Err(all_errors)
         }
-
-        Err(all_errors)
     }
 
     async fn handle_scraper(
