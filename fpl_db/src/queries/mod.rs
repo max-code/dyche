@@ -1,4 +1,5 @@
 pub mod club;
+pub mod discord;
 pub mod fixture;
 pub mod game_week;
 pub mod game_week_player;

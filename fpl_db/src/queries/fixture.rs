@@ -1,3 +1,4 @@
+use fpl_common::types::GameWeekId;
 use sqlx::PgPool;
 use tracing::debug;
 
@@ -25,7 +26,9 @@ pub async fn upsert_fixtures(pool: &PgPool, fixtures: &[Fixture]) -> Result<(), 
            "#,
             i16::from(fixture.id),
             fixture.code,
-            i16::from(fixture.game_week_id),
+            fixture
+                .game_week_id
+                .map(|gw: GameWeekId| -> i16 { gw.into() }),
             i16::from(fixture.home_team_id),
             i16::from(fixture.away_team_id),
             fixture.home_team_score,

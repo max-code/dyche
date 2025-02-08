@@ -14,3 +14,4 @@ fpl_api = { path = "../fpl_api" }
 fpl_db = { path = "../fpl_db" }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing = { workspace = true }
+sqlx = { workspace = true }

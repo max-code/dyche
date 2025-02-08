@@ -206,7 +206,7 @@ impl From<&PlayerOverview> for Player {
 pub struct PlayerFixtureDb {
     pub player_id: PlayerId,
     pub fixture_id: FixtureId,
-    pub event_name: String,
+    pub event_name: Option<String>,
     pub is_home: bool,
     pub difficulty: i16,
 }

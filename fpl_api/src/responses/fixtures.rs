@@ -8,7 +8,7 @@ pub type FixturesResponse = Vec<GameweekFixture>;
 pub struct GameweekFixture {
     #[serde(flatten)]
     pub common: FixtureCommon,
-    pub started: bool,
+    pub started: Option<bool>,
     pub team_h_difficulty: i16,
     pub team_a_difficulty: i16,
     pub pulse_id: i32,
@@ -22,9 +22,9 @@ pub struct FixtureCommon {
     pub team_h_score: Option<i16>,
     pub team_a: ClubId,
     pub team_a_score: Option<i16>,
-    pub event: GameWeekId,
+    pub event: Option<GameWeekId>,
     pub finished: bool,
     pub minutes: i16,
     pub provisional_start_time: bool,
-    pub kickoff_time: DateTime<Utc>,
+    pub kickoff_time: Option<DateTime<Utc>>,
 }

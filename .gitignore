@@ -34,3 +34,4 @@ Cargo.lock
 .zed/
 
 venv/
+test_scripts

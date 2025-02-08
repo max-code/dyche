@@ -103,7 +103,7 @@ pub struct PlayerHistoryPast {
 pub struct PlayerFixture {
     #[serde(flatten)]
     pub common: FixtureCommon,
-    pub event_name: String,
+    pub event_name: Option<String>,
     pub is_home: bool,
     pub difficulty: i16,
 }

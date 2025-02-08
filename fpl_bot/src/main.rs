@@ -1,26 +1,42 @@
 mod commands;
+mod utils;
 
 use commands::{captains, register};
 
+use sqlx::PgPool;
+use tracing::error;
+
 use poise::serenity_prelude as serenity;
 
-struct Data {}
+struct Data {
+    pool: PgPool,
+}
+
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
 
+async fn handle_bot_error(err: poise::FrameworkError<'_, Data, Error>) {
+    error!("{}", err);
+}
+
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<(dyn std::error::Error + std::marker::Send + Sync + 'static)>> {
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::INFO)
         .init();
 
     dotenv::from_filename(".env").ok();
+    dotenv::from_filename("../.env").ok();
+    let database_url = std::env::var("DATABASE_URL")?;
     let token = std::env::var("DISCORD_TOKEN").expect("DISCORD_TOKEN must be set in .env file");
     let intents = serenity::GatewayIntents::non_privileged();
+
+    let pool = PgPool::connect(&database_url).await?;
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
             commands: vec![register(), captains()],
+            on_error: |error| Box::pin(handle_bot_error(error)),
             ..Default::default()
         })
         .setup(|ctx, _ready, framework| {
@@ -42,7 +58,7 @@ async fn main() {
 
                 // Local
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
-                Ok(Data {})
+                Ok(Data { pool })
             })
         })
         .build();
@@ -51,4 +67,5 @@ async fn main() {
         .framework(framework)
         .await;
     client.unwrap().start().await.unwrap();
+    Ok(())
 }

@@ -1,4 +1,5 @@
 pub mod club;
+pub mod discord;
 pub mod fixture;
 pub mod game_week;
 pub mod game_week_player;
@@ -9,6 +10,7 @@ pub mod team_game_week;
 pub mod transfers;
 
 pub use club::*;
+pub use discord::*;
 pub use fixture::*;
 pub use game_week::*;
 pub use game_week_player::*;
