@@ -25,8 +25,12 @@ pub async fn paginate(
     // Send the embed with the first page as content
     let reply = {
         let components = serenity::CreateActionRow::Buttons(vec![
-            serenity::CreateButton::new(&prev_button_id).emoji('◀'),
-            serenity::CreateButton::new(&next_button_id).emoji('▶'),
+            serenity::CreateButton::new(&prev_button_id)
+                .emoji('◀')
+                .style(serenity::ButtonStyle::Secondary),
+            serenity::CreateButton::new(&next_button_id)
+                .emoji('▶')
+                .style(serenity::ButtonStyle::Secondary),
         ]);
 
         let embed = EmbedBuilder::new(command, pages[0])
