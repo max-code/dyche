@@ -4,6 +4,7 @@ use crate::utils::embed_builder::EmbedBuilder;
 use crate::Error;
 use crate::{constants::text_response, Context};
 use poise::CreateReply;
+use serenity::CreateEmbedFooter;
 
 /*
 
@@ -30,7 +31,12 @@ pub async fn paginate(
 
         let embed = EmbedBuilder::new(command, pages[0])
             .success(pages[0])
-            .build();
+            .build()
+            .footer(CreateEmbedFooter::new(format!(
+                "📖 Page {}/{}",
+                1,
+                pages.len()
+            )));
 
         CreateReply::default()
             .embed(embed)
@@ -64,7 +70,12 @@ pub async fn paginate(
 
         let embed = EmbedBuilder::new(command, pages[current_page])
             .success(pages[current_page])
-            .build();
+            .build()
+            .footer(CreateEmbedFooter::new(format!(
+                "📖 Page {}/{}",
+                current_page + 1,
+                pages.len()
+            )));
 
         press
             .create_response(
