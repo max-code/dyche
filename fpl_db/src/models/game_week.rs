@@ -53,13 +53,13 @@ impl From<&GameWeekOverview> for GameWeek {
             name: gw.name.clone(),
             deadline_time: gw.deadline_time,
             release_time: gw.release_time,
-            average_entry_score: gw.average_entry_score as i16,
+            average_entry_score: gw.average_entry_score,
             finished: gw.finished,
             data_checked: gw.data_checked,
-            highest_scoring_entry: gw.highest_scoring_entry.map(|x| x as i32),
+            highest_scoring_entry: gw.highest_scoring_entry,
             deadline_time_epoch: gw.deadline_time_epoch,
-            deadline_time_game_offset: gw.deadline_time_game_offset as i32,
-            highest_score: gw.highest_score.map(|x| x as i16),
+            deadline_time_game_offset: gw.deadline_time_game_offset,
+            highest_score: gw.highest_score,
             is_previous: gw.is_previous,
             is_current: gw.is_current,
             is_next: gw.is_next,
@@ -68,8 +68,8 @@ impl From<&GameWeekOverview> for GameWeek {
             can_enter: gw.can_enter,
             can_manage: gw.can_manage,
             released: gw.released,
-            ranked_count: gw.ranked_count as i32,
-            transfers_made: gw.transfers_made as i32,
+            ranked_count: gw.ranked_count,
+            transfers_made: gw.transfers_made,
             most_selected: gw.most_selected,
             most_transferred_in: gw.most_transferred_in,
             top_element: gw.top_element,
@@ -88,7 +88,7 @@ impl GameWeekChipPlay {
             .map(|cp| Self {
                 game_week_id: game_week_overview.id,
                 chip_name: cp.chip_name.to_string(),
-                num_played: cp.num_played as i32,
+                num_played: cp.num_played,
             })
             .collect()
     }
@@ -102,7 +102,7 @@ impl GameWeekTopElement {
             .map(|info| Self {
                 game_week_id: game_week_overview.id,
                 player_id: info.id,
-                points: info.points as i16,
+                points: info.points,
             })
     }
 }

@@ -69,7 +69,7 @@ impl From<(&LeagueId, &Standing)> for MiniLeagueStanding {
             team_id: standing.entry,
             entry_name: standing.entry_name.clone(),
             has_player: standing.has_played,
-            league_id: league_id.clone(),
+            league_id: *league_id,
         }
     }
 }

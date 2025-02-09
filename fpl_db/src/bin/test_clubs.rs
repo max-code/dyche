@@ -18,7 +18,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("DB connection took: {:?}", connect_start.elapsed());
 
     let client = FplClient::new();
-    let request = GameStateRequest::new();
+    let request = GameStateRequest::default();
 
     let api_start = Instant::now();
     let game_state = client.get(request).await.unwrap();

@@ -70,7 +70,7 @@ impl ScraperManager {
         );
         self.scrapers
             .entry(scraper.position())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(Box::new(scraper));
     }
 

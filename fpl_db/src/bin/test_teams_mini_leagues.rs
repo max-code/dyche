@@ -72,7 +72,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // USE THE STANDINGS TO GET ALL PLAYERS IN ALL OF THEIR LEAGUES
     let mini_league_standings_team_ids = mini_league_standings
         .iter()
-        .map(|standing| TeamId::from(standing.team_id))
+        .map(|standing| standing.team_id)
         .collect::<Vec<TeamId>>();
 
     // GET THE TEAM INFO FOR ALL OF THE PLAYERS IN ALL OF THEIR LEAGUES

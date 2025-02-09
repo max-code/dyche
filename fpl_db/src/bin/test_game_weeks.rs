@@ -20,7 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("DB connection took: {:?}", connect_start.elapsed());
 
     let client = FplClient::new();
-    let request = GameStateRequest::new();
+    let request = GameStateRequest::default();
 
     let api_start = Instant::now();
     let game_state = client.get(request).await.unwrap();
@@ -48,8 +48,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let conversion_2_start = Instant::now();
     let game_weeks_chips_rows: Vec<GameWeekChipPlay> = gameweeks
         .iter()
-        .map(|gameweek| GameWeekChipPlay::from_overview(gameweek))
-        .flatten()
+        .flat_map(GameWeekChipPlay::from_overview)
         .collect();
     println!(
         "Conversion to GameWeek chips playestook: {:?}",
@@ -69,7 +68,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let conversion_3_start = Instant::now();
     let game_weeks_chips_rows: Vec<GameWeekTopElement> = gameweeks
         .iter()
-        .filter_map(|gameweek| GameWeekTopElement::from_overview(gameweek))
+        .filter_map(GameWeekTopElement::from_overview)
         .collect();
     println!(
         "Conversion to GameWeek top elements took: {:?}",

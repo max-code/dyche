@@ -57,11 +57,11 @@ impl GameWeekId {
     }
 
     pub fn all_weeks_iter() -> impl Iterator<Item = GameWeekId> {
-        (Self::MIN..=Self::MAX).map(|w| Self(w))
+        (Self::MIN..=Self::MAX).map(Self)
     }
 
     pub fn weeks_range_iter(start: i16, end: i16) -> impl Iterator<Item = GameWeekId> {
-        (start..=end).map(|w| Self(w))
+        (start..=end).map(Self)
     }
 }
 
@@ -89,7 +89,7 @@ impl TryFrom<i16> for GameWeekId {
 
 impl From<GameWeekId> for i16 {
     fn from(id: GameWeekId) -> i16 {
-        id.0 as i16
+        id.0
     }
 }
 

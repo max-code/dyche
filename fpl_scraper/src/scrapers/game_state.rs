@@ -40,7 +40,7 @@ impl GameStateScraper {
     async fn handle_game_weeks(
         pool: &PgPool,
         scraper_name: &str,
-        game_weeks: &Vec<GameWeekOverview>,
+        game_weeks: &[GameWeekOverview],
     ) -> Result<(), ScraperError> {
         /*
         GAME WEEKS
@@ -56,8 +56,7 @@ impl GameStateScraper {
          */
         let game_weeks_chips_rows: Vec<GameWeekChipPlay> = game_weeks
             .iter()
-            .map(|gameweek| GameWeekChipPlay::from_overview(gameweek))
-            .flatten()
+            .flat_map(GameWeekChipPlay::from_overview)
             .collect();
         upsert_game_week_chip_plays(pool, &game_weeks_chips_rows).await?;
 
@@ -66,7 +65,7 @@ impl GameStateScraper {
         */
         let game_weeks_top_elements: Vec<GameWeekTopElement> = game_weeks
             .iter()
-            .filter_map(|gameweek| GameWeekTopElement::from_overview(gameweek))
+            .filter_map(GameWeekTopElement::from_overview)
             .collect();
         upsert_game_week_top_elements(pool, &game_weeks_top_elements).await?;
 
@@ -85,7 +84,7 @@ impl GameStateScraper {
     async fn handle_clubs(
         pool: &PgPool,
         scraper_name: &str,
-        clubs: &Vec<ClubOverview>,
+        clubs: &[ClubOverview],
     ) -> Result<(), ScraperError> {
         let clubs_rows: Vec<Club> = clubs.iter().map(|f| f.into()).collect();
 
@@ -106,7 +105,7 @@ impl GameStateScraper {
     async fn handle_players(
         pool: &PgPool,
         scraper_name: &str,
-        players: &Vec<PlayerOverview>,
+        players: &[PlayerOverview],
     ) -> Result<(), ScraperError> {
         let players_rows: Vec<Player> = players.iter().map(|f| f.into()).collect();
 
@@ -159,7 +158,7 @@ impl Scraper for GameStateScraper {
     }
 
     async fn scrape(&self) -> Result<(), ScraperError> {
-        let request = GameStateRequest::new();
+        let request = GameStateRequest::default();
         let game_state = self.client.get(request).await?;
 
         GameStateScraper::handle_clubs(&self.pool, self.name(), &game_state.teams).await?;

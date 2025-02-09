@@ -224,7 +224,7 @@ mod tests {
         let client = FplClient::new();
 
         // Act
-        let request = GameStateRequest::new();
+        let request = GameStateRequest::default();
         let response = client.get(request).await.unwrap();
 
         // Assert

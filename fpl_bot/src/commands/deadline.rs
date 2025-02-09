@@ -44,9 +44,7 @@ pub async fn deadline(
             format!(
                 "**{}** Deadline: {}",
                 name,
-                deadline_time
-                    .format(&format!("%B {}, %l:%M %p, %Y", Ordinal(day).to_string()))
-                    .to_string()
+                deadline_time.format(&format!("%B {}, %l:%M %p, %Y", Ordinal(day)))
             )
         })
         .collect::<Vec<String>>();

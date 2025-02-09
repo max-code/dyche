@@ -16,7 +16,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = FplClient::new();
 
     // Get game state and insert players
-    let game_state = client.get(GameStateRequest::new()).await?;
+    let game_state = client.get(GameStateRequest::default()).await?;
     let players: Vec<Player> = game_state.elements.iter().map(|gs| gs.into()).collect();
     upsert_players(&pool, &players).await?;
 

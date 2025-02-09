@@ -257,7 +257,7 @@ async fn get_mini_leagues(
                         ),
                     )
                     .await?;
-                return Err(e.into());
+                return Err(e);
             }
         };
 
@@ -329,17 +329,17 @@ async fn get_and_upsert_related_mini_leagues_and_teams(
         .collect();
 
     let (leagues_info, leagues_standing_info) =
-        get_mini_leagues(&ctx, &message, embed.clone(), user_league_ids).await?;
+        get_mini_leagues(ctx, message, embed.clone(), user_league_ids).await?;
 
     upsert_mini_leagues(&ctx.data().pool, &leagues_info).await?;
     upsert_mini_league_standings(&ctx.data().pool, &leagues_standing_info).await?;
 
     let all_team_ids = leagues_standing_info
         .iter()
-        .map(|standing| TeamId::from(standing.team_id))
+        .map(|standing| standing.team_id)
         .collect();
 
-    let all_teams = get_all_related_teams(&ctx, &message, embed.clone(), all_team_ids).await?;
+    let all_teams = get_all_related_teams(ctx, message, embed.clone(), all_team_ids).await?;
 
     upsert_teams(&ctx.data().pool, &all_teams).await?;
 
