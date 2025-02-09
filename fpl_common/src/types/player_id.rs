@@ -1,3 +1,6 @@
+use async_trait::async_trait;
+use poise::serenity_prelude::{self as serenity};
+use poise::{SlashArgError, SlashArgument};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::ops::Deref;
@@ -47,5 +50,24 @@ impl Deref for PlayerId {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+#[async_trait]
+impl SlashArgument for PlayerId {
+    fn create(builder: serenity::CreateCommandOption) -> serenity::CreateCommandOption {
+        builder
+            .kind(serenity::CommandOptionType::Integer)
+            .description("FPL League ID")
+    }
+
+    async fn extract(
+        ctx: &serenity::Context,
+        interaction: &serenity::CommandInteraction,
+        value: &serenity::ResolvedValue<'_>,
+    ) -> Result<PlayerId, SlashArgError> {
+        tracing::info!("Extracting player_id from {:?}", value);
+        let val = poise::extract_slash_argument!(i16, ctx, interaction, value).await?;
+        Ok(PlayerId::from(val))
     }
 }

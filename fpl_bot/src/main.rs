@@ -1,7 +1,8 @@
 mod commands;
+mod constants;
 mod utils;
 
-use commands::{captains, deadline, register};
+use commands::{captains, deadline, register, whohas};
 
 use fpl_api::FplClient;
 use sqlx::PgPool;
@@ -39,7 +40,7 @@ async fn main() -> Result<(), Box<(dyn std::error::Error + std::marker::Send + S
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
-            commands: vec![register(), captains(), deadline()],
+            commands: vec![register(), captains(), deadline(), whohas()],
             on_error: |error| Box::pin(handle_bot_error(error)),
             ..Default::default()
         })

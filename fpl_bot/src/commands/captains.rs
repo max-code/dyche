@@ -1,10 +1,9 @@
 use crate::utils::autocomplete::autocomplete_mini_league;
-use crate::utils::embed_builder::EmbedBuilder;
+use crate::utils::paginator::maybe_paginate_rows;
 use crate::{Context, Error};
 
 use fpl_common::types::{LeagueId, PlayerId};
 use fpl_db::queries::game_week::get_current_game_week;
-use poise::CreateReply;
 use tracing::info;
 
 const COMMAND: &str = "/captains";
@@ -12,7 +11,7 @@ const COMMAND: &str = "/captains";
 #[poise::command(slash_command)]
 pub async fn captains(
     ctx: Context<'_>,
-    #[description = "Who to greet"]
+    #[description = "Mini League"]
     #[autocomplete = "autocomplete_mini_league"]
     league_id: LeagueId,
 ) -> Result<(), Error> {
@@ -23,25 +22,11 @@ pub async fn captains(
         league_id
     );
 
-    let embed = EmbedBuilder::new(
-        COMMAND,
-        format!("Fetching captains for Mini League ID {}", league_id).as_str(),
-    );
-
-    let message = ctx
-        .send(CreateReply::default().embed(embed.clone().build()))
-        .await?;
-
     let captains = get_captains(&ctx, league_id).await?;
-    let embed = embed.success(captains.as_str()).build();
-    message
-        .edit(ctx, CreateReply::default().embed(embed))
-        .await?;
-
-    Ok(())
+    maybe_paginate_rows(ctx, captains, COMMAND).await
 }
 
-async fn get_captains(ctx: &Context<'_>, league_id: LeagueId) -> Result<String, Error> {
+async fn get_captains(ctx: &Context<'_>, league_id: LeagueId) -> Result<Vec<String>, Error> {
     let current_game_week = get_current_game_week(&ctx.data().pool).await?;
     let captains = sqlx::query!(
         r#"
@@ -68,11 +53,8 @@ async fn get_captains(ctx: &Context<'_>, league_id: LeagueId) -> Result<String, 
             .collect::<Vec<(String, PlayerId, String)>>()
     })?;
 
-    let captains_text = captains
+    Ok(captains
         .into_iter()
         .map(|(player_name, _, web_name)| format!("**{}** captained **{}**", player_name, web_name))
-        .collect::<Vec<String>>()
-        .join("\n");
-
-    Ok(captains_text)
+        .collect::<Vec<String>>())
 }

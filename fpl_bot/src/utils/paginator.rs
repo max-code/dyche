@@ -1,7 +1,8 @@
 use poise::serenity_prelude as serenity;
 
 use crate::utils::embed_builder::EmbedBuilder;
-use crate::Context;
+use crate::Error;
+use crate::{constants::text_response, Context};
 use poise::CreateReply;
 
 /*
@@ -73,6 +74,41 @@ pub async fn paginate(
                 ),
             )
             .await?;
+    }
+
+    Ok(())
+}
+
+/*
+This will send a new message if a previous message has already been sent.
+Not designed to work with processing messages.
+*/
+pub async fn maybe_paginate_rows(
+    ctx: Context<'_>,
+    rows: Vec<String>,
+    command: &str,
+) -> Result<(), Error> {
+    match rows.len() {
+        1..=text_response::MAX_ROWS_PER_PAGE => {
+            let embed = EmbedBuilder::new(command, "")
+                .success(rows.join("\n").as_str())
+                .build();
+
+            ctx.send(CreateReply::default().embed(embed)).await?;
+        }
+        _ => {
+            let chunks = rows
+                .chunks(text_response::MAX_ROWS_PER_PAGE)
+                .map(|chunk| chunk.join("\n"))
+                .collect::<Vec<String>>();
+
+            paginate(
+                ctx,
+                command,
+                &chunks.iter().map(|page| page.as_str()).collect::<Vec<_>>(),
+            )
+            .await?;
+        }
     }
 
     Ok(())
