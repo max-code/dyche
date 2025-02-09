@@ -4,12 +4,13 @@ mod utils;
 use commands::{captains, register};
 
 use sqlx::PgPool;
+use std::sync::Arc;
 use tracing::error;
 
 use poise::serenity_prelude as serenity;
 
 struct Data {
-    pool: PgPool,
+    pool: Arc<PgPool>,
 }
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -31,7 +32,7 @@ async fn main() -> Result<(), Box<(dyn std::error::Error + std::marker::Send + S
     let token = std::env::var("DISCORD_TOKEN").expect("DISCORD_TOKEN must be set in .env file");
     let intents = serenity::GatewayIntents::non_privileged();
 
-    let pool = PgPool::connect(&database_url).await?;
+    let pool = Arc::new(PgPool::connect(&database_url).await?);
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {

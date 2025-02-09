@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use fpl_common::types::{ClubId, GameWeekId, TeamId};
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct TeamResponse {
     pub id: TeamId,
     pub joined_time: DateTime<Utc>,
@@ -27,12 +27,12 @@ pub struct TeamResponse {
     pub leagues: ClassicLeagues,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct ClassicLeagues {
     pub classic: Vec<ClassicLeague>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct ClassicLeague {
     pub id: i32,
     pub admin_entry: Option<i32>,
