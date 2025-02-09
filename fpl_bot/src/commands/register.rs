@@ -7,7 +7,6 @@ use fpl_db::queries::team_game_week::{
     upsert_team_game_week_automatic_subs, upsert_team_game_week_picks, upsert_team_game_weeks,
 };
 use futures::StreamExt;
-use sqlx::PgPool;
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
@@ -46,67 +45,28 @@ pub async fn register(
         .send(CreateReply::default().embed(embed.clone().build()))
         .await?;
 
-    let client = Arc::new(FplClient::new());
-
-    if let Err(err) =
-        check_user_registered(&ctx, &message, embed.clone(), Arc::clone(&ctx.data().pool)).await
-    {
-        return Err(err);
-    }
-
-    // TODOS:
-    // - Get all the transfers, subs, picks, game weeks, etc etc JUST for the registering user
-    //   Can 'lazily' get that data for everyone else in their league
+    check_user_registered(&ctx, &message, embed.clone()).await?;
 
     let embed = embed.update("Fetching team information.");
     message
         .edit(ctx, CreateReply::default().embed(embed.clone().build()))
         .await?;
 
-    let team =
-        match get_team_information(&ctx, &message, embed.clone(), Arc::clone(&client), team_id)
-            .await
-        {
-            Ok(team) => team,
-            Err(err) => return Err(err),
-        };
-
-    let team_db: Vec<Team> = vec![team.clone().into()];
-    let teams_upsert = upsert_teams(&ctx.data().pool, &team_db).await;
-    if let Err(err) = teams_upsert {
-        return Err(err.into());
-    }
-
-    if let Err(err) = get_and_upsert_team_game_week_information(
-        &ctx,
-        &message,
-        embed.clone(),
-        Arc::clone(&client),
-        Arc::clone(&ctx.data().pool),
-        team_id,
-    )
-    .await
-    {
-        return Err(err);
-    };
+    let team = get_and_upsert_team_information(&ctx, &message, embed.clone(), team_id).await?;
+    get_and_upsert_team_game_week_information(&ctx, &message, embed.clone(), team_id).await?;
 
     let embed = embed.update("Fetching related mini league and team information.");
     message
         .edit(ctx, CreateReply::default().embed(embed.clone().build()))
         .await?;
 
-    if let Err(err) = get_and_upsert_related_mini_leagues_and_teams(
+    get_and_upsert_related_mini_leagues_and_teams(
         &ctx,
         &message,
         embed.clone(),
-        Arc::clone(&client),
-        Arc::clone(&ctx.data().pool),
         team.leagues.classic,
     )
-    .await
-    {
-        return Err(err);
-    };
+    .await?;
 
     let discord_user = DiscordUser::new(ctx.author().id.into(), team_id);
     insert_discord_user(&ctx.data().pool, &discord_user).await?;
@@ -126,10 +86,9 @@ async fn check_user_registered(
     ctx: &Context<'_>,
     message: &ReplyHandle<'_>,
     embed: EmbedBuilder<Processing>,
-    pool: Arc<PgPool>,
 ) -> Result<(), Error> {
     // If the discord user is already registered, cant reregister
-    match get_discord_user(&pool, ctx.author().id.into()).await {
+    match get_discord_user(&ctx.data().pool, ctx.author().id.into()).await {
         Err(err) => {
             message
                 .edit(
@@ -159,14 +118,13 @@ async fn check_user_registered(
     }
 }
 
-async fn get_team_information(
+async fn get_and_upsert_team_information(
     ctx: &Context<'_>,
     message: &ReplyHandle<'_>,
     embed: EmbedBuilder<Processing>,
-    client: Arc<FplClient>,
     team_id: TeamId,
 ) -> Result<TeamResponse, Error> {
-    let team_response = client.get(TeamRequest::new(team_id)).await;
+    let team_response = ctx.data().client.get(TeamRequest::new(team_id)).await;
     let team = match team_response {
         Ok(team) => team,
         Err(err) => {
@@ -180,6 +138,7 @@ async fn get_team_information(
         }
     };
 
+    upsert_teams(&ctx.data().pool, &[team.clone().into()]).await?;
     Ok(team)
 }
 
@@ -187,21 +146,14 @@ async fn get_and_upsert_team_game_week_information(
     ctx: &Context<'_>,
     message: &ReplyHandle<'_>,
     embed: EmbedBuilder<Processing>,
-    client: Arc<FplClient>,
-    pool: Arc<PgPool>,
     team_id: TeamId,
 ) -> Result<(), Error> {
-    let current_game_week = match get_current_game_week(&pool).await {
-        Ok(current_game_week) => current_game_week,
-        Err(err) => return Err(err.into()),
-    };
-
-    let current_week = i16::from(current_game_week.id);
-    let game_week_range = GameWeekId::weeks_range_iter(1, current_week);
+    let current_game_week = i16::from(get_current_game_week(&ctx.data().pool).await?.id);
+    let game_week_range = GameWeekId::weeks_range_iter(1, current_game_week);
 
     let mut stream = futures::stream::iter(game_week_range)
         .map(|game_week_id| {
-            let client = Arc::clone(&client);
+            let client = Arc::clone(&ctx.data().client);
             async move {
                 client
                     .get(TeamGameWeekRequest::new(team_id, game_week_id))
@@ -210,9 +162,9 @@ async fn get_and_upsert_team_game_week_information(
         })
         .buffer_unordered(5);
 
-    let mut game_week_picks = Vec::with_capacity(current_week as usize * 15);
-    let mut game_week_automatic_subs = Vec::with_capacity(current_week as usize * 4);
-    let mut team_game_weeks = Vec::with_capacity(current_week as usize);
+    let mut game_week_picks = Vec::with_capacity(current_game_week as usize * 15);
+    let mut game_week_automatic_subs = Vec::with_capacity(current_game_week as usize * 4);
+    let mut team_game_weeks = Vec::with_capacity(current_game_week as usize);
 
     while let Some(result) = stream.next().await {
         let response = match result {
@@ -248,21 +200,9 @@ async fn get_and_upsert_team_game_week_information(
 
         team_game_weeks.push((team_id, game_week_id, &response).into());
     }
-    let tgw_upsert = upsert_team_game_weeks(&pool, &team_game_weeks).await;
-    if let Err(err) = tgw_upsert {
-        return Err(err.into());
-    }
-
-    let tgw_picks_upsert = upsert_team_game_week_picks(&pool, &game_week_picks).await;
-    if let Err(err) = tgw_picks_upsert {
-        return Err(err.into());
-    }
-
-    let tgw_subs_upsert =
-        upsert_team_game_week_automatic_subs(&pool, &game_week_automatic_subs).await;
-    if let Err(err) = tgw_subs_upsert {
-        return Err(err.into());
-    }
+    upsert_team_game_weeks(&ctx.data().pool, &team_game_weeks).await?;
+    upsert_team_game_week_picks(&ctx.data().pool, &game_week_picks).await?;
+    upsert_team_game_week_automatic_subs(&ctx.data().pool, &game_week_automatic_subs).await?;
 
     Ok(())
 }
@@ -289,12 +229,11 @@ async fn get_mini_leagues(
     ctx: &Context<'_>,
     message: &ReplyHandle<'_>,
     embed: EmbedBuilder<Processing>,
-    client: Arc<FplClient>,
     user_league_ids: HashSet<LeagueId>,
 ) -> Result<(Vec<MiniLeague>, Vec<MiniLeagueStanding>), Error> {
     let mut stream = futures::stream::iter(user_league_ids)
         .map(|league_id| {
-            let client = Arc::clone(&client);
+            let client = Arc::clone(&ctx.data().client);
             async move { handle_mini_league_requests(client, league_id).await }
         })
         .buffer_unordered(5);
@@ -340,13 +279,12 @@ async fn get_all_related_teams(
     message: &ReplyHandle<'_>,
     embed: EmbedBuilder<Processing>,
     all_team_ids: Vec<TeamId>,
-    client: Arc<FplClient>,
 ) -> Result<Vec<Team>, Error> {
     let mut related_teams = Vec::new();
 
     let mut stream = futures::stream::iter(all_team_ids)
         .map(|team_id| {
-            let client = Arc::clone(&client);
+            let client = Arc::clone(&ctx.data().client);
             async move { client.get(TeamRequest::new(team_id)).await }
         })
         .buffer_unordered(5);
@@ -380,8 +318,6 @@ async fn get_and_upsert_related_mini_leagues_and_teams(
     ctx: &Context<'_>,
     message: &ReplyHandle<'_>,
     embed: EmbedBuilder<Processing>,
-    client: Arc<FplClient>,
-    pool: Arc<PgPool>,
     mini_leagues: Vec<ClassicLeague>,
 ) -> Result<(), Error> {
     // GET ALL THE LEAGUES THEYRE IN
@@ -391,51 +327,20 @@ async fn get_and_upsert_related_mini_leagues_and_teams(
         .map(|league| LeagueId::new(league.id))
         .collect();
 
-    let (leagues_info, leagues_standing_info) = match get_mini_leagues(
-        &ctx,
-        &message,
-        embed.clone(),
-        Arc::clone(&client),
-        user_league_ids,
-    )
-    .await
-    {
-        Ok((leagues_info, leagues_standing_info)) => (leagues_info, leagues_standing_info),
-        Err(err) => return Err(err),
-    };
+    let (leagues_info, leagues_standing_info) =
+        get_mini_leagues(&ctx, &message, embed.clone(), user_league_ids).await?;
 
-    let ml_upsert = upsert_mini_leagues(&pool, &leagues_info).await;
-    if let Err(err) = ml_upsert {
-        return Err(err.into());
-    }
-
-    let mls_upsert = upsert_mini_league_standings(&pool, &leagues_standing_info).await;
-    if let Err(err) = mls_upsert {
-        return Err(err.into());
-    }
+    upsert_mini_leagues(&ctx.data().pool, &leagues_info).await?;
+    upsert_mini_league_standings(&ctx.data().pool, &leagues_standing_info).await?;
 
     let all_team_ids = leagues_standing_info
         .iter()
         .map(|standing| TeamId::from(standing.team_id))
         .collect();
 
-    let all_teams = match get_all_related_teams(
-        &ctx,
-        &message,
-        embed.clone(),
-        all_team_ids,
-        Arc::clone(&client),
-    )
-    .await
-    {
-        Ok(all_teams) => all_teams,
-        Err(err) => return Err(err),
-    };
+    let all_teams = get_all_related_teams(&ctx, &message, embed.clone(), all_team_ids).await?;
 
-    let teams_upsert = upsert_teams(&pool, &all_teams).await;
-    if let Err(err) = teams_upsert {
-        return Err(err.into());
-    }
+    upsert_teams(&ctx.data().pool, &all_teams).await?;
 
     Ok(())
 }

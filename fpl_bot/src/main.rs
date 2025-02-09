@@ -3,6 +3,7 @@ mod utils;
 
 use commands::{captains, register};
 
+use fpl_api::FplClient;
 use sqlx::PgPool;
 use std::sync::Arc;
 use tracing::error;
@@ -11,6 +12,7 @@ use poise::serenity_prelude as serenity;
 
 struct Data {
     pool: Arc<PgPool>,
+    client: Arc<FplClient>,
 }
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -33,6 +35,7 @@ async fn main() -> Result<(), Box<(dyn std::error::Error + std::marker::Send + S
     let intents = serenity::GatewayIntents::non_privileged();
 
     let pool = Arc::new(PgPool::connect(&database_url).await?);
+    let client = Arc::new(FplClient::new());
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
@@ -59,7 +62,7 @@ async fn main() -> Result<(), Box<(dyn std::error::Error + std::marker::Send + S
 
                 // Local
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
-                Ok(Data { pool })
+                Ok(Data { pool, client })
             })
         })
         .build();
