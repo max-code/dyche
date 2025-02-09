@@ -1,5 +1,6 @@
 use crate::utils::embed_builder::{EmbedBuilder, Processing};
 use crate::{Context, Error};
+
 use fpl_api::responses::mini_league::{MiniLeagueResponse, Standing};
 use fpl_api::responses::team::{ClassicLeague, TeamResponse};
 use fpl_db::queries::game_week::get_current_game_week;
@@ -22,17 +23,17 @@ use fpl_db::queries::discord::{get_discord_user, insert_discord_user};
 use fpl_db::queries::mini_league::{upsert_mini_league_standings, upsert_mini_leagues};
 use fpl_db::queries::team::upsert_teams;
 
-const REGISTER_COMMAND: &str = "/register";
+const COMMAND: &str = "/register";
 
 #[poise::command(slash_command)]
 pub async fn register(
     ctx: Context<'_>,
     #[description = "Team ID from the FPL website"] team_id: TeamId,
 ) -> Result<(), Error> {
-    info!("Register command called");
+    info!("{} called by {}", COMMAND, ctx.author().id);
 
     let embed = EmbedBuilder::new(
-        REGISTER_COMMAND,
+        COMMAND,
         format!(
             "Registering user {} with Team ID {}",
             ctx.author().name,
@@ -98,7 +99,7 @@ async fn check_user_registered(
                 .await?;
             Err(format!(
                 "Error checking if discord user already exists when processing command {}: {}",
-                REGISTER_COMMAND, err
+                COMMAND, err
             )
             .into())
         }
