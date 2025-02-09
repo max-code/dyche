@@ -1,12 +1,16 @@
+use async_trait::async_trait;
+use poise::serenity_prelude::{self as serenity};
+use poise::{SlashArgError, SlashArgument};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::ops::Deref;
+use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(try_from = "i16")]
 #[derive(sqlx::Type)]
 #[sqlx(transparent)]
-pub struct GameWeekId(i16);
+pub struct GameWeekId(pub i16);
 
 #[derive(Debug, thiserror::Error)]
 #[error("GameWeek must be between 1 and 38, got {0}")]
@@ -98,5 +102,41 @@ impl PartialEq<i16> for GameWeekId {
 impl PartialEq<GameWeekId> for i16 {
     fn eq(&self, other: &GameWeekId) -> bool {
         *self == other.0
+    }
+}
+
+impl FromStr for GameWeekId {
+    type Err = std::num::ParseIntError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        s.parse::<i16>().and_then(|n| match GameWeekId::new(n) {
+            Ok(id) => Ok(id),
+            Err(_) => Err(s.parse::<i16>().unwrap_err()),
+        })
+    }
+}
+
+#[async_trait]
+impl SlashArgument for GameWeekId {
+    fn create(builder: serenity::CreateCommandOption) -> serenity::CreateCommandOption {
+        builder
+            .kind(serenity::CommandOptionType::Integer)
+            .max_int_value(GameWeekId::MAX as u64)
+            .min_int_value(GameWeekId::MIN as u64)
+            .description(format!(
+                "FPL Game Week ID ({}-{})",
+                GameWeekId::MIN,
+                GameWeekId::MAX
+            ))
+    }
+
+    async fn extract(
+        ctx: &serenity::Context,
+        interaction: &serenity::CommandInteraction,
+        value: &serenity::ResolvedValue<'_>,
+    ) -> Result<GameWeekId, SlashArgError> {
+        tracing::debug!("Extracting game_week_id from {:?}", value);
+        let err: &'static str = "Couldn't parse provided Game Week ID into a GameWeekId type.";
+        let val = poise::extract_slash_argument!(i16, ctx, interaction, value).await?;
+        GameWeekId::try_from(val).map_err(|_| SlashArgError::new_command_structure_mismatch(err))
     }
 }

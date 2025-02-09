@@ -12,6 +12,8 @@ use futures::StreamExt;
 use sqlx::PgPool;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use tokio::time::interval;
+use tokio_stream::wrappers::IntervalStream;
 use tracing::{debug, info, warn};
 
 use fpl_api::requests::PlayerRequest;
@@ -110,10 +112,17 @@ impl Scraper for PlayersScraper {
         for chunk in all_player_ids.chunks(chunk_size) {
             let chunk = chunk.to_vec();
 
-            let mut stream = futures::stream::iter(chunk.into_iter().map(|player_id| {
-                PlayersScraper::process_player(Arc::clone(&self.client), player_id)
-            }))
-            .buffer_unordered(5);
+            let interval = interval(Duration::from_millis(5));
+            let player_ids_stream = futures::stream::iter(chunk.into_iter());
+
+            let combined_stream =
+                player_ids_stream
+                    .zip(IntervalStream::new(interval))
+                    .map(|(player_id, _)| {
+                        PlayersScraper::process_player(Arc::clone(&self.client), player_id)
+                    });
+
+            let mut stream = combined_stream.buffer_unordered(5);
 
             let mut player_fixtures = Vec::new();
             let mut player_history = Vec::new();

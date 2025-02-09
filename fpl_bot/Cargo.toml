@@ -16,3 +16,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing = { workspace = true }
 sqlx = { workspace = true }
 futures = { workspace = true }
+tokio-stream = "0.1.17"
+ordinal = "0.3.2"
+chrono.workspace = true
