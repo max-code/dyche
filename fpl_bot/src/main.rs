@@ -2,12 +2,13 @@ mod commands;
 mod constants;
 mod utils;
 
-use commands::{captains, deadline, register, whohas};
+use commands::{captains, chips, deadline, register, whohas};
 
+use ::serenity::all::CommandOptionChoice;
 use fpl_api::FplClient;
 use sqlx::PgPool;
 use std::sync::Arc;
-use tracing::error;
+use tracing::{error, info};
 
 use poise::serenity_prelude as serenity;
 
@@ -40,8 +41,11 @@ async fn main() -> Result<(), Box<(dyn std::error::Error + std::marker::Send + S
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
-            commands: vec![register(), captains(), deadline(), whohas()],
+            commands: vec![register(), captains(), deadline(), whohas(), chips()],
             on_error: |error| Box::pin(handle_bot_error(error)),
+            event_handler: |ctx, event, framework, data| {
+                Box::pin(event_handler(ctx, event, framework, data))
+            },
             ..Default::default()
         })
         .setup(|ctx, _ready, framework| {

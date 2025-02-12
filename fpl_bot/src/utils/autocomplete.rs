@@ -52,3 +52,50 @@ pub async fn autocomplete_player<'a>(
         .into_iter()
         .map(|(_, name, id)| serenity::AutocompleteChoice::new(name, id))
 }
+
+pub async fn autocomplete_league_or_player<'a>(
+    _ctx: Context<'_>,
+    _partial: &'a str,
+) -> impl Iterator<Item = String> + 'a {
+    ["League".to_string(), "User".to_string()].into_iter()
+}
+
+pub async fn autocomplete_league_or_player_stub<'a>(
+    ctx: Context<'_>,
+    partial: &'a str,
+) -> impl Iterator<Item = String> + 'a {
+    // Access the interaction from context
+    let interaction = match ctx {
+        Context::Application(ctx) => &ctx.interaction.clone(),
+        _ => {
+            return vec![].into_iter();
+        }
+    };
+
+    // Get arg1's value from the interaction data
+    let league_or_user = interaction
+        .data
+        .options
+        .iter()
+        .find(|opt| opt.name == "arg1")
+        .and_then(|opt| match &opt.value {
+            serenity::CommandDataOptionValue::String(s) => Some(s.as_str()),
+            _ => None,
+        })
+        .unwrap_or("");
+
+    // Return appropriate choices based on arg1
+    match league_or_user {
+        "League" => (1..=5)
+            .map(|n| n.to_string())
+            .filter(|n| n.starts_with(partial))
+            .collect::<Vec<_>>(),
+        "User" => vec!["10", "20", "30", "40", "50"]
+            .into_iter()
+            .map(String::from)
+            .filter(|n| n.starts_with(partial))
+            .collect::<Vec<_>>(),
+        _ => vec![],
+    }
+    .into_iter()
+}
