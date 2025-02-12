@@ -1,6 +1,5 @@
 use crate::utils::autocomplete::{
-    self, autocomplete_league_or_player, autocomplete_league_or_player_stub,
-    autocomplete_mini_league,
+    self, autocomplete_league_or_user, autocomplete_league_or_user_value, autocomplete_mini_league,
 };
 use crate::utils::paginator::maybe_paginate_rows;
 use crate::{Context, Error};
@@ -14,21 +13,25 @@ const COMMAND: &str = "/chips";
 #[poise::command(slash_command)]
 pub async fn chips(
     ctx: Context<'_>,
-    #[description = "arg1"]
-    #[autocomplete = "autocomplete_league_or_player"]
-    arg1: String,
-    #[description = "arg2"]
-    #[autocomplete = "autocomplete_league_or_player_stub"]
-    arg2: String,
+    #[description = "Chips for a single user or entire league."]
+    #[autocomplete = "autocomplete_league_or_user"]
+    league_or_user: String,
+    #[description = "User/League"]
+    #[autocomplete = "autocomplete_league_or_user_value"]
+    league_or_user_value: String,
 ) -> Result<(), Error> {
     info!(
-        "{} called by {} with arg1({}) arg2({})",
+        "{} called by {} with league_or_user({}) league_or_user_value({})",
         COMMAND,
         ctx.author().id,
-        arg1,
-        arg2
+        league_or_user,
+        league_or_user_value
     );
 
-    ctx.say(format!("Arg1: {} Arg2: {}", arg1, arg2)).await?;
+    ctx.say(format!(
+        "league_or_user: {} Arleague_or_user_valueg2: {}",
+        league_or_user, league_or_user_value
+    ))
+    .await?;
     Ok(())
 }

@@ -53,14 +53,14 @@ pub async fn autocomplete_player<'a>(
         .map(|(_, name, id)| serenity::AutocompleteChoice::new(name, id))
 }
 
-pub async fn autocomplete_league_or_player<'a>(
+pub async fn autocomplete_league_or_user<'a>(
     _ctx: Context<'_>,
     _partial: &'a str,
 ) -> impl Iterator<Item = String> + 'a {
     ["League".to_string(), "User".to_string()].into_iter()
 }
 
-pub async fn autocomplete_league_or_player_stub<'a>(
+pub async fn autocomplete_league_or_user_value<'a>(
     ctx: Context<'_>,
     partial: &'a str,
 ) -> impl Iterator<Item = String> + 'a {
