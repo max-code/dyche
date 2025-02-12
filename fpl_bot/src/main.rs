@@ -43,9 +43,6 @@ async fn main() -> Result<(), Box<(dyn std::error::Error + std::marker::Send + S
         .options(poise::FrameworkOptions {
             commands: vec![register(), captains(), deadline(), whohas(), chips()],
             on_error: |error| Box::pin(handle_bot_error(error)),
-            event_handler: |ctx, event, framework, data| {
-                Box::pin(event_handler(ctx, event, framework, data))
-            },
             ..Default::default()
         })
         .setup(|ctx, _ready, framework| {
