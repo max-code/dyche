@@ -40,6 +40,16 @@ impl Chip {
             Self::AssMan => "manager",
         }
     }
+
+    pub fn pretty_name(&self) -> &'static str {
+        match self {
+            Self::WildCard => "Wildcard",
+            Self::FreeHit => "Free Hit",
+            Self::TripleCaptain => "Triple Captain",
+            Self::BenchBoost => "Bench Boost",
+            Self::AssMan => "Assistant Manager",
+        }
+    }
 }
 
 impl Display for Chip {

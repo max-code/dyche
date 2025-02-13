@@ -4,11 +4,10 @@ mod utils;
 
 use commands::{captains, chips, deadline, register, whohas};
 
-use ::serenity::all::CommandOptionChoice;
 use fpl_api::FplClient;
 use sqlx::PgPool;
 use std::sync::Arc;
-use tracing::{error, info};
+use tracing::error;
 
 use poise::serenity_prelude as serenity;
 
@@ -34,7 +33,8 @@ async fn main() -> Result<(), Box<(dyn std::error::Error + std::marker::Send + S
     dotenv::from_filename("../.env").ok();
     let database_url = std::env::var("DATABASE_URL")?;
     let token = std::env::var("DISCORD_TOKEN").expect("DISCORD_TOKEN must be set in .env file");
-    let intents = serenity::GatewayIntents::non_privileged();
+    let intents =
+        serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::GUILD_MEMBERS;
 
     let pool = Arc::new(PgPool::connect(&database_url).await?);
     let client = Arc::new(FplClient::new());

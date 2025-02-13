@@ -11,7 +11,7 @@ use futures::StreamExt;
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
-use tracing::info;
+use tracing::{info, warn};
 
 use poise::{CreateReply, ReplyHandle};
 
@@ -24,6 +24,7 @@ use fpl_db::queries::mini_league::{upsert_mini_league_standings, upsert_mini_lea
 use fpl_db::queries::team::upsert_teams;
 
 const COMMAND: &str = "/register";
+const MAX_MINI_LEAGUE_ENTRIES: i32 = 25;
 
 #[poise::command(slash_command)]
 pub async fn register(
@@ -143,52 +144,40 @@ async fn get_and_upsert_team_information(
     Ok(team)
 }
 
-async fn get_and_upsert_team_game_week_information(
-    ctx: &Context<'_>,
-    message: &ReplyHandle<'_>,
-    embed: EmbedBuilder<Processing>,
+async fn process_team_game_week_data(
+    pool: &sqlx::PgPool,
+    client: &FplClient,
     team_id: TeamId,
 ) -> Result<(), Error> {
-    let current_game_week = i16::from(get_current_game_week(&ctx.data().pool).await?.id);
+    let current_game_week = get_current_game_week(pool).await?.id.into();
     let game_week_range = GameWeekId::weeks_range_iter(1, current_game_week);
 
     let mut stream = futures::stream::iter(game_week_range)
         .map(|game_week_id| {
-            let client = Arc::clone(&ctx.data().client);
+            let client = client.clone();
             async move {
                 client
                     .get(TeamGameWeekRequest::new(team_id, game_week_id))
                     .await
             }
         })
-        .buffer_unordered(5);
+        .buffer_unordered(5); // 5 concurrent requests per team
 
-    let mut game_week_picks = Vec::with_capacity(current_game_week as usize * 15);
-    let mut game_week_automatic_subs = Vec::with_capacity(current_game_week as usize * 4);
-    let mut team_game_weeks = Vec::with_capacity(current_game_week as usize);
+    let mut game_week_picks = Vec::new();
+    let mut game_week_automatic_subs = Vec::new();
+    let mut team_game_weeks = Vec::new();
 
     while let Some(result) = stream.next().await {
         let response = match result {
             Ok(response) => response,
             Err(e) => {
-                message
-                    .edit(
-                        *ctx,
-                        CreateReply::default().embed(
-                            embed
-                                .clone()
-                                .error("Error fetching weekly team information when registering.")
-                                .build(),
-                        ),
-                    )
-                    .await?;
-                return Err(e.into());
+                warn!("{}", e);
+                continue;
             }
         };
-        let game_week_id = match response.game_week_id {
-            Some(game_week_id) => game_week_id,
-            None => return Err("Error getting game_week_id from TeamGameWeekResponse".into()),
-        };
+        let game_week_id = response
+            .game_week_id
+            .ok_or("Missing game_week_id in response")?;
 
         game_week_picks.extend(
             response
@@ -201,11 +190,26 @@ async fn get_and_upsert_team_game_week_information(
 
         team_game_weeks.push((team_id, game_week_id, &response).into());
     }
-    upsert_team_game_weeks(&ctx.data().pool, &team_game_weeks).await?;
-    upsert_team_game_week_picks(&ctx.data().pool, &game_week_picks).await?;
-    upsert_team_game_week_automatic_subs(&ctx.data().pool, &game_week_automatic_subs).await?;
+
+    upsert_team_game_weeks(pool, &team_game_weeks).await?;
+    upsert_team_game_week_picks(pool, &game_week_picks).await?;
+    upsert_team_game_week_automatic_subs(pool, &game_week_automatic_subs).await?;
 
     Ok(())
+}
+
+async fn get_and_upsert_team_game_week_information(
+    ctx: &Context<'_>,
+    message: &ReplyHandle<'_>,
+    embed: EmbedBuilder<Processing>,
+    team_id: TeamId,
+) -> Result<(), Error> {
+    let embed = embed.update("Fetching team game week information.");
+    message
+        .edit(*ctx, CreateReply::default().embed(embed.clone().build()))
+        .await?;
+
+    process_team_game_week_data(&ctx.data().pool, &ctx.data().client, team_id).await
 }
 
 async fn handle_mini_league_requests(
@@ -324,7 +328,9 @@ async fn get_and_upsert_related_mini_leagues_and_teams(
     // GET ALL THE LEAGUES THEYRE IN
     let user_league_ids: HashSet<LeagueId> = mini_leagues
         .iter()
-        .filter(|league| league.admin_entry.is_some() && league.rank_count <= 100)
+        .filter(|league| {
+            league.admin_entry.is_some() && league.rank_count <= MAX_MINI_LEAGUE_ENTRIES
+        })
         .map(|league| LeagueId::new(league.id))
         .collect();
 
@@ -340,8 +346,29 @@ async fn get_and_upsert_related_mini_leagues_and_teams(
         .collect();
 
     let all_teams = get_all_related_teams(ctx, message, embed.clone(), all_team_ids).await?;
-
     upsert_teams(&ctx.data().pool, &all_teams).await?;
+
+    // Process each related team's game week data
+    let all_team_ids: Vec<TeamId> = all_teams.into_iter().map(|t| t.id).collect();
+    let pool = ctx.data().pool.clone();
+    let client = ctx.data().client.clone();
+
+    let mut stream = futures::stream::iter(all_team_ids)
+        .map(|team_id| {
+            let pool = pool.clone();
+            let client = client.clone();
+            async move {
+                if let Err(e) = process_team_game_week_data(&pool, &client, team_id).await {
+                    tracing::error!("Error processing game weeks for team {}: {}", team_id, e);
+                }
+                Ok::<(), Error>(())
+            }
+        })
+        .buffer_unordered(2); // Process 2 teams concurrently
+
+    while let Some(result) = stream.next().await {
+        result?;
+    }
 
     Ok(())
 }

@@ -8,6 +8,14 @@ pub async fn autocomplete_mini_league<'a>(
     ctx: Context<'_>,
     partial: &'a str,
 ) -> impl Iterator<Item = serenity::AutocompleteChoice> + 'a {
+    get_mini_league_name_autocompletes(ctx, partial, false).await
+}
+
+async fn get_mini_league_name_autocompletes<'a>(
+    ctx: Context<'_>,
+    partial: &'a str,
+    as_string: bool,
+) -> impl Iterator<Item = serenity::AutocompleteChoice> + 'a {
     let mini_league_names = (sqlx::query!(
         "SELECT name, id FROM discord_user_mini_leagues WHERE discord_id = $1 AND name IS NOT NULL",
         ctx.author().id.get() as i64
@@ -20,7 +28,10 @@ pub async fn autocomplete_mini_league<'a>(
     mini_league_names
         .into_iter()
         .filter(|(name, _)| name.to_lowercase().starts_with(&partial.to_lowercase()))
-        .map(|(name, id)| serenity::AutocompleteChoice::new(name, id))
+        .map(move |(name, id)| match as_string {
+            true => serenity::AutocompleteChoice::new(name, id.to_string()),
+            false => serenity::AutocompleteChoice::new(name, id),
+        })
 }
 
 pub async fn autocomplete_player<'a>(
@@ -63,7 +74,7 @@ pub async fn autocomplete_league_or_user<'a>(
 pub async fn autocomplete_league_or_user_value<'a>(
     ctx: Context<'_>,
     partial: &'a str,
-) -> impl Iterator<Item = String> + 'a {
+) -> impl Iterator<Item = serenity::AutocompleteChoice> + 'a {
     // Access the interaction from context
     let interaction = match ctx {
         Context::Application(ctx) => &ctx.interaction.clone(),
@@ -72,30 +83,62 @@ pub async fn autocomplete_league_or_user_value<'a>(
         }
     };
 
-    // Get arg1's value from the interaction data
+    let guild_id = if let Some(guild_id) = interaction.guild_id {
+        guild_id
+    } else {
+        return vec![].into_iter();
+    };
+
+    println!("guild_id: {}", guild_id);
+
     let league_or_user = interaction
         .data
         .options
         .iter()
-        .find(|opt| opt.name == "arg1")
+        .find(|opt| opt.name == "league_or_user")
         .and_then(|opt| match &opt.value {
             serenity::CommandDataOptionValue::String(s) => Some(s.as_str()),
             _ => None,
         })
         .unwrap_or("");
 
-    // Return appropriate choices based on arg1
-    match league_or_user {
-        "League" => (1..=5)
-            .map(|n| n.to_string())
-            .filter(|n| n.starts_with(partial))
+    println!("league_or_user: {}", league_or_user);
+
+    let choices = match league_or_user {
+        "League" => get_mini_league_name_autocompletes(ctx, partial, true)
+            .await
             .collect::<Vec<_>>(),
-        "User" => vec!["10", "20", "30", "40", "50"]
-            .into_iter()
-            .map(String::from)
-            .filter(|n| n.starts_with(partial))
-            .collect::<Vec<_>>(),
+        "User" => {
+            match guild_id
+                .members(&ctx.serenity_context().http, None, None)
+                .await
+            {
+                Ok(members) => {
+                    println!("members {:#?}", members);
+                    members
+                        .into_iter()
+                        .filter_map(|member| {
+                            let name = member.display_name().to_string();
+                            if name.to_lowercase().contains(&partial.to_lowercase()) {
+                                Some(serenity::AutocompleteChoice::new(
+                                    name,
+                                    member.user.id.to_string(),
+                                ))
+                            } else {
+                                None
+                            }
+                        })
+                        .take(25)
+                        .collect::<Vec<_>>()
+                }
+                Err(err) => {
+                    println!("{:#?}", err);
+                    vec![]
+                }
+            }
+        }
         _ => vec![],
-    }
-    .into_iter()
+    };
+
+    choices.into_iter()
 }

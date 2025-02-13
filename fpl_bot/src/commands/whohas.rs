@@ -40,7 +40,9 @@ pub async fn get_whohas(
         r#"
         SELECT
             mls.player_name,
-            mls.entry_name
+            mls.entry_name,
+            tgwp.is_captain,
+            tgwp.is_vice_captain
         FROM team_game_week_picks tgwp
         JOIN mini_league_standings mls ON tgwp.team_id = mls.team_id
         WHERE tgwp.game_week_id = $1
@@ -55,15 +57,51 @@ pub async fn get_whohas(
     .await
     .map(|rows| {
         rows.into_iter()
-            .map(|row| (row.player_name, row.entry_name))
-            .collect::<Vec<(String, String)>>()
+            .map(|row| {
+                (
+                    row.player_name,
+                    row.entry_name,
+                    row.is_captain,
+                    row.is_vice_captain,
+                )
+            })
+            .collect::<Vec<(String, String, bool, bool)>>()
     })?;
 
+    let player_name = sqlx::query!(
+        "SELECT web_name FROM players WHERE id = $1",
+        i16::from(player_id)
+    )
+    .fetch_one(&*ctx.data().pool)
+    .await?
+    .web_name;
+
     match whohas.len() {
-        0 => Ok(vec!["No one.".to_string()]),
-        _ => Ok(whohas
-            .into_iter()
-            .map(|(player_name, entry_name)| format!("**{}** - {}", player_name, entry_name))
-            .collect::<Vec<String>>()),
+        0 => Ok(vec![format!(
+            "No one has {player_name} in **GW{}**.",
+            current_game_week.id
+        )]),
+        _ => {
+            let mut rows = whohas
+                .into_iter()
+                .map(|(player_name, entry_name, is_captain, is_vice_captain)| {
+                    let captain_string = match (is_captain, is_vice_captain) {
+                        (true, _) => "**(C)**",
+                        (_, false) => "**(VC)**",
+                        _ => "",
+                    };
+
+                    format!("**{}** ({}) {captain_string}", player_name, entry_name)
+                })
+                .collect::<Vec<String>>();
+            rows.insert(
+                0,
+                format!(
+                    "**__Users with {player_name} in GW{}__**",
+                    current_game_week.id
+                ),
+            );
+            Ok(rows)
+        }
     }
 }
