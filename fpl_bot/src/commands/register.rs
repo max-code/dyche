@@ -1,5 +1,7 @@
 use crate::utils::embed_builder::{EmbedBuilder, Processing};
+use crate::{log_call, log_timer, start_timer};
 use crate::{Context, Error};
+use std::time::Instant;
 
 use fpl_api::responses::mini_league::{MiniLeagueResponse, Standing};
 use fpl_api::responses::team::{ClassicLeague, TeamResponse};
@@ -7,11 +9,12 @@ use fpl_db::queries::game_week::get_current_game_week;
 use fpl_db::queries::team_game_week::{
     upsert_team_game_week_automatic_subs, upsert_team_game_week_picks, upsert_team_game_weeks,
 };
+
 use futures::StreamExt;
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 use poise::{CreateReply, ReplyHandle};
 
@@ -31,7 +34,8 @@ pub async fn register(
     ctx: Context<'_>,
     #[description = "Team ID from the FPL website"] team_id: TeamId,
 ) -> Result<(), Error> {
-    info!("{} called by {}", COMMAND, ctx.author().id);
+    log_call!(COMMAND, ctx, "team_id", team_id);
+    let timer = start_timer!();
 
     let embed = EmbedBuilder::new(
         COMMAND,
@@ -48,6 +52,7 @@ pub async fn register(
         .await?;
 
     check_user_registered(&ctx, &message, embed.clone()).await?;
+    log_timer!(timer, COMMAND, ctx, "checked already registered");
 
     let embed = embed.update("Fetching team information.");
     message
@@ -56,6 +61,12 @@ pub async fn register(
 
     let team = get_and_upsert_team_information(&ctx, &message, embed.clone(), team_id).await?;
     get_and_upsert_team_game_week_information(&ctx, &message, embed.clone(), team_id).await?;
+    log_timer!(
+        timer,
+        COMMAND,
+        ctx,
+        "fetched user team/game week information"
+    );
 
     let embed = embed.update("Fetching related mini league and team information.");
     message
@@ -69,9 +80,16 @@ pub async fn register(
         team.leagues.classic,
     )
     .await?;
+    log_timer!(
+        timer,
+        COMMAND,
+        ctx,
+        "fetched related team/game week information"
+    );
 
     let discord_user = DiscordUser::new(ctx.author().id.into(), team_id);
     insert_discord_user(&ctx.data().pool, &discord_user).await?;
+    log_timer!(timer, COMMAND, ctx, "added discord user");
 
     let embed = embed
         .success(format!("Registered Team ID {}.", team_id).as_str())
@@ -80,6 +98,7 @@ pub async fn register(
     message
         .edit(ctx, CreateReply::default().embed(embed))
         .await?;
+    log_timer!(timer, COMMAND, ctx, "completed successfully");
 
     Ok(())
 }

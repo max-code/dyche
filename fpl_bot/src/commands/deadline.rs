@@ -1,11 +1,13 @@
 use chrono::Datelike;
-use fpl_common::types::GameWeekId;
-use fpl_db::queries::game_week::get_current_game_week;
 use ordinal::Ordinal;
 use sqlx::types::chrono::{DateTime, Utc};
-use tracing::info;
+use std::time::Instant;
+use tracing::{debug, info};
 
+use crate::{log_call, log_timer, start_timer};
 use crate::{utils::paginator::paginate, Context, Error};
+use fpl_common::types::GameWeekId;
+use fpl_db::queries::game_week::get_current_game_week;
 
 const COMMAND: &str = "/deadline";
 
@@ -14,12 +16,8 @@ pub async fn deadline(
     ctx: Context<'_>,
     #[description = "Game Week"] game_week_id: Option<GameWeekId>,
 ) -> Result<(), Error> {
-    info!(
-        "{} called by {} with game_week_id({:?})",
-        COMMAND,
-        ctx.author().id,
-        game_week_id
-    );
+    log_call!(COMMAND, ctx, "game_week_id", game_week_id);
+    let timer = start_timer!();
 
     let game_week_deadlines = sqlx::query!(
         r#"
@@ -36,6 +34,7 @@ pub async fn deadline(
             .map(|row| (row.name, row.deadline_time))
             .collect::<Vec<(String, DateTime<Utc>)>>()
     })?;
+    log_timer!(timer, COMMAND, ctx, "fetched deadlines");
 
     let mut pages = game_week_deadlines
         .into_iter()
@@ -66,6 +65,7 @@ pub async fn deadline(
             pages.rotate_left(index);
         }
     }
+    log_timer!(timer, COMMAND, ctx, "formatted deadlines");
 
     paginate(
         ctx,
@@ -73,6 +73,5 @@ pub async fn deadline(
         &pages.iter().map(|p| p.as_str()).collect::<Vec<_>>(),
     )
     .await?;
-
     Ok(())
 }

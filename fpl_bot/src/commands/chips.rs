@@ -1,16 +1,18 @@
 use std::collections::HashMap;
 use std::str::FromStr;
+use std::time::Instant;
 
-use crate::utils::autocomplete::{autocomplete_league_or_user, autocomplete_league_or_user_value};
+use crate::autocompletes::{autocomplete_league_or_user, autocomplete_league_or_user_value};
 use crate::utils::paginator::maybe_paginate_rows;
 use crate::{Context, Error};
+use crate::{start_timer, log_timer, log_call};
 
-use fpl_common::types::{Chip, LeagueId};
-use tracing::info;
+use fpl_common::types::{Chip, LeagueId, TeamId};
+use tracing::{debug, info};
 
 const COMMAND: &str = "/chips";
 
-#[poise::command(slash_command)]
+#[poise::command(slash_command, user_cooldown=1)]
 pub async fn chips(
     ctx: Context<'_>,
     #[description = "Chips for a single user or entire league."]
@@ -20,19 +22,22 @@ pub async fn chips(
     #[autocomplete = "autocomplete_league_or_user_value"]
     league_or_user_value: String,
 ) -> Result<(), Error> {
-    info!(
-        "{} called by {} with league_or_user({}) league_or_user_value({})",
-        COMMAND,
-        ctx.author().id,
-        league_or_user,
-        league_or_user_value
-    );
+    log_call!(COMMAND, ctx, "league_or_user", league_or_user, "league_or_user_value", league_or_user_value);
+    let timer = start_timer!();
 
-    let value = league_or_user_value.parse::<i64>()?;
+    let value: i64 = league_or_user_value.parse::<i64>()?;
 
     let rows = match league_or_user.as_str() {
-        "User" => get_user_chips(ctx, value).await?,
-        "League" => get_league_chips(ctx, LeagueId::new(value as i32)).await?,
+        "User" => {
+            let user_chips = get_user_chips(ctx, value).await?;
+            log_timer!(timer, COMMAND, ctx, "got user chips");
+            user_chips
+        },
+        "League" => {
+            let league_chips = get_league_chips(ctx, LeagueId::new(value as i32)).await?;
+            log_timer!(timer, COMMAND, ctx, "got league chips");
+            league_chips
+        },
         _ => {
             return Err("Unknown league_or_user_type".into());
         }
@@ -57,7 +62,7 @@ pub async fn get_league_chips(ctx: Context<'_>, league_id: LeagueId) -> Result<V
         let rows = rows.into_iter()
             .map(|row| {
                 (
-                    row.team_id,
+                    TeamId::from(row.team_id),
                     row.player_name,
                     row.entry_name,
                     row.active_chip.unwrap(),
@@ -67,7 +72,8 @@ pub async fn get_league_chips(ctx: Context<'_>, league_id: LeagueId) -> Result<V
             .collect::<Vec<_>>();
 
         // Group by team_id
-        let mut grouped: HashMap<i32, Vec<(i32, String, String, String, i16)>> = HashMap::new();
+        type TeamRows = Vec<(TeamId, String, String, String, i16)>;
+        let mut grouped: HashMap<TeamId, TeamRows> = HashMap::new();
         for row in rows {
             grouped.entry(row.0)
                 .or_default()

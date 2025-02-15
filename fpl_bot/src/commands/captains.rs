@@ -1,10 +1,11 @@
-use crate::utils::autocomplete::autocomplete_mini_league;
+use crate::autocompletes::autocomplete_mini_league;
 use crate::utils::paginator::maybe_paginate_rows;
-use crate::{Context, Error};
+use crate::{log_call, log_timer, start_timer, Context, Error};
+use std::time::Instant;
+use tracing::{debug, info};
 
 use fpl_common::types::{LeagueId, PlayerId};
 use fpl_db::queries::game_week::get_current_game_week;
-use tracing::info;
 
 const COMMAND: &str = "/captains";
 
@@ -15,18 +16,9 @@ pub async fn captains(
     #[autocomplete = "autocomplete_mini_league"]
     league_id: LeagueId,
 ) -> Result<(), Error> {
-    info!(
-        "{} called by {} with league_id({})",
-        COMMAND,
-        ctx.author().id,
-        league_id
-    );
+    log_call!(COMMAND, ctx, "league_id", league_id);
+    let timer: Instant = start_timer!();
 
-    let captains = get_captains(&ctx, league_id).await?;
-    maybe_paginate_rows(ctx, captains, COMMAND).await
-}
-
-async fn get_captains(ctx: &Context<'_>, league_id: LeagueId) -> Result<Vec<String>, Error> {
     let current_game_week = get_current_game_week(&ctx.data().pool).await?;
     let captains = sqlx::query!(
         r#"
@@ -53,8 +45,12 @@ async fn get_captains(ctx: &Context<'_>, league_id: LeagueId) -> Result<Vec<Stri
             .collect::<Vec<(String, PlayerId, String)>>()
     })?;
 
-    Ok(captains
+    log_timer!(timer, COMMAND, ctx, "fetched captains");
+
+    let captains_rows = captains
         .into_iter()
         .map(|(player_name, _, web_name)| format!("**{}** captained **{}**", player_name, web_name))
-        .collect::<Vec<String>>())
+        .collect::<Vec<String>>();
+
+    maybe_paginate_rows(ctx, captains_rows, COMMAND).await
 }
