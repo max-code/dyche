@@ -52,7 +52,7 @@ pub async fn autocomplete_league_or_user_value<'a>(
                 Ok(members) => members
                     .into_iter()
                     .filter_map(|member| {
-                        let name = member.display_name().to_string();
+                        let name = format!("{} ({})", member.display_name(), member.user.name);
                         if name.to_lowercase().contains(&partial.to_lowercase()) {
                             Some(serenity::AutocompleteChoice::new(
                                 name,

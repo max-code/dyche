@@ -3,11 +3,13 @@ use std::str::FromStr;
 use std::time::Instant;
 
 use crate::autocompletes::{autocomplete_league_or_user, autocomplete_league_or_user_value};
+use crate::utils::common::{check_discord_user_registered, get_not_registered_message};
 use crate::utils::paginator::maybe_paginate_rows;
 use crate::{Context, Error};
 use crate::{start_timer, log_timer, log_call};
 
 use fpl_common::types::{Chip, LeagueId, TeamId};
+use poise::CreateReply;
 use tracing::{debug, info};
 
 const COMMAND: &str = "/chips";
@@ -28,10 +30,17 @@ pub async fn chips(
     let value: i64 = league_or_user_value.parse::<i64>()?;
 
     let rows = match league_or_user.as_str() {
-        "User" => {
+        "User" => match check_discord_user_registered(&ctx.data().pool, value).await? {
+            true => {
             let user_chips = get_user_chips(ctx, value).await?;
             log_timer!(timer, COMMAND, ctx, "got user chips");
             user_chips
+            }
+            false => {
+                ctx.send(CreateReply::default().embed(get_not_registered_message(COMMAND, value)))
+                    .await?;
+                return Ok(());
+            }
         },
         "League" => {
             let league_chips = get_league_chips(ctx, LeagueId::new(value as i32)).await?;

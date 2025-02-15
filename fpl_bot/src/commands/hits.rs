@@ -2,11 +2,13 @@ use std::collections::BTreeMap;
 use std::time::Instant;
 
 use crate::autocompletes::{autocomplete_league_or_user, autocomplete_league_or_user_value};
+use crate::utils::common::{check_discord_user_registered, get_not_registered_message};
 use crate::utils::paginator::maybe_paginate_rows;
 use crate::{log_call, log_timer, start_timer};
 use crate::{Context, Error};
 
 use fpl_common::types::LeagueId;
+use poise::CreateReply;
 use tracing::{debug, info};
 
 const COMMAND: &str = "/hits";
@@ -34,11 +36,18 @@ pub async fn hits(
     let value: i64 = league_or_user_value.parse::<i64>()?;
 
     let rows = match league_or_user.as_str() {
-        "User" => {
-            let user_hits = get_user_hits(ctx, &timer, value).await?;
-            log_timer!(timer, COMMAND, ctx, "got user hits");
-            user_hits
-        }
+        "User" => match check_discord_user_registered(&ctx.data().pool, value).await? {
+            true => {
+                let user_hits = get_user_hits(ctx, &timer, value).await?;
+                log_timer!(timer, COMMAND, ctx, "got user hits");
+                user_hits
+            }
+            false => {
+                ctx.send(CreateReply::default().embed(get_not_registered_message(COMMAND, value)))
+                    .await?;
+                return Ok(());
+            }
+        },
         "League" => {
             let league_hits = get_league_hits(ctx, &timer, LeagueId::from(value as i32)).await?;
             log_timer!(timer, COMMAND, ctx, "got league hits");

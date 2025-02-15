@@ -167,11 +167,12 @@ async fn get_whohas_player(
                 if let Some(group) = grouped.get(key) {
                     result.push(label.to_string());
                     for (player_name, team_name, multiplier) in group {
-                        let benched_string = if *multiplier == 0 { "(Benched)" } else { "" };
-                        result.push(format!(
-                            "- **{}** ({}) {}",
-                            player_name, team_name, benched_string
-                        ));
+                        let status = match multiplier {
+                            0 => "(Benched)",
+                            3 => "(Triple Captain)",
+                            _ => "",
+                        };
+                        result.push(format!("- **{}** ({}) {}", player_name, team_name, status));
                     }
                 }
             }
