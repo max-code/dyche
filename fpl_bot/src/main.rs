@@ -3,12 +3,12 @@ mod commands;
 mod constants;
 mod utils;
 
-use commands::{captains, chips, deadline, loglevel, register, whohas};
+use commands::{captains, chips, deadline, hits, loglevel, register, whohas};
 
 use fpl_api::FplClient;
 use sqlx::PgPool;
 use std::sync::Arc;
-use tracing::error;
+use tracing::{error, info};
 use tracing_subscriber::{prelude::*, reload, EnvFilter, Registry};
 
 use poise::serenity_prelude as serenity;
@@ -69,6 +69,7 @@ async fn main() -> Result<(), Box<(dyn std::error::Error + std::marker::Send + S
                 whohas(),
                 chips(),
                 loglevel(),
+                hits(),
             ],
             on_error: |error| Box::pin(handle_bot_error(error)),
             ..Default::default()
@@ -76,20 +77,32 @@ async fn main() -> Result<(), Box<(dyn std::error::Error + std::marker::Send + S
         .setup(|ctx, _ready, framework| {
             Box::pin(async move {
                 // Test Guild command registration
-                let test_guild_id = serenity::GuildId::new(
-                    std::env::var("TEST_GUILD_ID")
-                        .expect("Missing TEST_GUILD_ID")
-                        .parse()
-                        .expect("Invalid TEST_GUILD_ID"),
-                );
+                let test_guild_ids = std::env::var("TEST_GUILD_IDS")
+                    .expect("Missing TEST_GUILD_IDS")
+                    .split(',')
+                    .map(|id| {
+                        serenity::GuildId::new(
+                            id.trim()
+                                .parse()
+                                .expect("Invalid guild ID in TEST_GUILD_IDS"),
+                        )
+                    })
+                    .collect::<Vec<_>>();
 
-                poise::builtins::register_in_guild(
-                    ctx,
-                    &framework.options().commands,
-                    test_guild_id,
-                )
-                .await?;
-
+                for guild_id in test_guild_ids {
+                    match poise::builtins::register_in_guild(
+                        ctx,
+                        &framework.options().commands,
+                        guild_id,
+                    )
+                    .await
+                    {
+                        Ok(_) => info!("Successfully registered commands in guild {}", guild_id),
+                        Err(e) => {
+                            error!("Failed to register commands in guild {}: {}", guild_id, e)
+                        }
+                    }
+                }
                 // Local
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
                 Ok(Data {

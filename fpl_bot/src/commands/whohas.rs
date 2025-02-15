@@ -248,7 +248,7 @@ async fn get_whohas_club(
                     .into_iter()
                     .map(|(user_name, team_name)| format!("{user_name} ({team_name})"))
                     .collect::<Vec<_>>()
-                    .join(",");
+                    .join(", ");
                 format!("**{}** - {}", player, users_formatted)
             }));
 
