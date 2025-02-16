@@ -13,7 +13,7 @@ pub async fn upsert_game_week_players(
     );
 
     for game_week_player in game_week_players {
-        sqlx::query!(
+        match sqlx::query!(
             r#"
            INSERT INTO game_week_players (
                player_id, game_week_id, minutes, goals_scored, assists, clean_sheets,
@@ -79,7 +79,19 @@ pub async fn upsert_game_week_players(
             game_week_player.in_dreamteam,
         )
         .execute(&mut *tx)
-        .await?;
+        .await
+        {
+            Ok(_) => continue,
+            Err(e) => {
+                tracing::error!(
+                    "Failed to upsert game week player. player_id: {}, game_week_id: {}, error: {}",
+                    game_week_player.player_id,
+                    game_week_player.game_week_id,
+                    e
+                );
+                return Err(e);
+            }
+        }
     }
     tx.commit().await?;
     debug!("Upsert Completed");
