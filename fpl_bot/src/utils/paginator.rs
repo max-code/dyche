@@ -12,6 +12,7 @@ Stole from https://docs.rs/poise/latest/src/poise/builtins/paginate.rs.html#35-9
 but with my own embeds
 
 */
+
 pub async fn paginate(
     ctx: Context<'_>,
     command: &str,

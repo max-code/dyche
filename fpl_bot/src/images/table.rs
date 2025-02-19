@@ -229,7 +229,6 @@ impl TableRenderer {
                             svg::node::element::TSpan::new(&row.name)
                                 .set("x", 125)
                                 .set("dy", "1.3em")
-                                .set("font-weight", "800")
                                 .set("font-size", "20"),
                         ),
                 )

@@ -1,6 +1,7 @@
 use crate::autocompletes::{autocomplete_mini_league, autocomplete_overall_or_week};
 use crate::images::{TableData, TableRenderer};
 use crate::utils::embed_builder::EmbedBuilder;
+use crate::utils::embed_builder_v2::Embed;
 use crate::{log_call, log_timer, start_timer, Context, Error};
 use sqlx::FromRow;
 use std::cmp::Reverse;
@@ -44,26 +45,13 @@ pub async fn table(
     );
     let timer: Instant = start_timer!();
 
-    let raw_ctx = match ctx {
-        Context::Application(ctx) => ctx,
-        _ => return Err("This command only works as a slash command".into()),
-    };
-    let interaction = raw_ctx.interaction;
-    let http = ctx.serenity_context().http.clone();
-    let token = interaction.token.clone();
-    let embed = EmbedBuilder::new(COMMAND, "Processing table request...");
-    // Send initial response
-    interaction
-        .create_response(
-            &http,
-            serenity::builder::CreateInteractionResponse::Message(
-                serenity::builder::CreateInteractionResponseMessage::new()
-                    .embed(embed.clone().build()),
-            ),
-        )
-        .await?;
+    let mut embed = Embed::new(ctx)?
+        .title("Processing table request...")
+        .processing();
 
-    let mut live_points = get_live_points(&ctx, league_id).await?;
+    embed.send().await?;
+
+    let mut live_points = get_points(&ctx, league_id).await?;
     live_points.sort_by_key(|lp| {
         Reverse(match overall_or_week.as_str() {
             "Overall" => lp.calculated_overall_points,
@@ -109,28 +97,15 @@ pub async fn table(
         .await?;
     log_timer!(timer, COMMAND, ctx, "rendered image");
 
-    let image_path = Path::new("/Users/maxjordan/code/dyche/fpl_bot/table.png");
-    let attachment = serenity::builder::CreateAttachment::path(image_path)
-        .await
-        .map_err(|e| format!("Attachment error: {}", e))?;
-
-    http.edit_original_interaction_response(
-        &token,
-        &serde_json::json!({
-            "embeds": [embed.success("").build()
-                .image(format!("attachment://{}", attachment.filename))
-                .to_owned()]
-        }),
-        vec![attachment],
-    )
-    .await?;
+    embed
+        .image("/Users/maxjordan/code/dyche/fpl_bot/table.png")
+        .success()
+        .send()
+        .await?;
     Ok(())
 }
 
-pub async fn get_live_points(
-    ctx: &Context<'_>,
-    league_id: LeagueId,
-) -> Result<Vec<LivePoints>, Error> {
+pub async fn get_points(ctx: &Context<'_>, league_id: LeagueId) -> Result<Vec<LivePoints>, Error> {
     Ok(sqlx::query_as!(
         LivePoints,
         r#"
