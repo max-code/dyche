@@ -5,8 +5,9 @@ use fpl_api::FplClient;
 use fpl_scraper::{
     fixtures::FixturesScraper, game_state::GameStateScraper,
     game_week_players::GameWeekPlayersScraper, mini_leagues::MiniLeaguesScraper,
-    players::PlayersScraper, team_game_weeks::TeamGameWeekScraper, teams::TeamsScraper,
-    transfers::TransfersScraper, ScraperManager,
+    player_images::PlayerPhotosScraper, players::PlayersScraper,
+    team_game_weeks::TeamGameWeekScraper, teams::TeamsScraper, transfers::TransfersScraper,
+    ScraperManager,
 };
 use sqlx::PgPool;
 use tracing::info;
@@ -30,6 +31,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let one_minute = Duration::from_secs(60);
     let five_minutes = Duration::from_secs(60 * 5);
     let thirty_minutes = Duration::from_secs(60 * 30);
+    let one_day = Duration::from_secs(60 * 60 * 24);
 
     // First
     let game_state_scraper =
@@ -62,6 +64,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let transfers_scraper =
         TransfersScraper::new(Arc::clone(&pool), Arc::clone(&client), thirty_minutes);
     manager.register_scraper(transfers_scraper);
+
+    // Fourth
+    let photos_scraper = PlayerPhotosScraper::new(Arc::clone(&pool), Arc::clone(&client), one_day);
+    manager.register_scraper(photos_scraper);
 
     manager.run().await;
     Ok(())

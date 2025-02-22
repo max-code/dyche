@@ -1,6 +1,7 @@
-use super::FplRequest;
+use super::{FplRequest, FplResponseType};
 use crate::responses::team::TeamResponse;
 use fpl_common::types::TeamId;
+use serde::de::Error;
 
 #[derive(Debug)]
 pub struct TeamRequest {
@@ -22,12 +23,17 @@ impl FplRequest for TeamRequest {
 
     fn process_response(
         &self,
-        response: serde_json::Value,
-    ) -> Result<Self::Response, serde_json::Error> {
-        if let Some(message) = response.as_str() {
-            return Err(serde::de::Error::custom(message));
-        }
+        response: FplResponseType,
+    ) -> Result<Self::Response, Box<dyn std::error::Error>> {
+        match response {
+            FplResponseType::Json(value) => {
+                if let Some(message) = value.as_str() {
+                    return Err(Box::new(serde_json::Error::custom(message)));
+                }
 
-        serde_json::from_value(response)
+                Ok(serde_json::from_value(value)?)
+            }
+            FplResponseType::Binary(_) => Err("Expected JSON response, got binary".into()),
+        }
     }
 }

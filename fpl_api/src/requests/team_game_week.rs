@@ -1,6 +1,7 @@
-use super::FplRequest;
+use super::{FplRequest, FplResponseType};
 use crate::responses::team_game_week::{ErrorResponse, TeamGameWeekResponse};
 use fpl_common::types::{GameWeekId, TeamId};
+use serde::de::Error;
 
 #[derive(Debug)]
 pub struct TeamGameWeekRequest {
@@ -26,19 +27,24 @@ impl FplRequest for TeamGameWeekRequest {
 
     fn process_response(
         &self,
-        response: serde_json::Value,
-    ) -> Result<Self::Response, serde_json::Error> {
-        if let Some(message) = response.as_str() {
-            return Err(serde::de::Error::custom(message));
-        }
+        response: FplResponseType,
+    ) -> Result<Self::Response, Box<dyn std::error::Error>> {
+        match response {
+            FplResponseType::Json(value) => {
+                if let Some(message) = value.as_str() {
+                    return Err(Box::new(serde_json::Error::custom(message)));
+                }
 
-        if let Ok(error) = serde_json::from_value::<ErrorResponse>(response.clone()) {
-            return Err(serde::de::Error::custom(error.detail));
-        }
+                if let Ok(error) = serde_json::from_value::<ErrorResponse>(value.clone()) {
+                    return Err(Box::new(serde_json::Error::custom(error.detail)));
+                }
 
-        let mut success: TeamGameWeekResponse = serde_json::from_value(response)?;
-        success.team_id = Some(self.team_id);
-        success.game_week_id = Some(self.game_week);
-        Ok(success)
+                let mut success: TeamGameWeekResponse = serde_json::from_value(value)?;
+                success.team_id = Some(self.team_id);
+                success.game_week_id = Some(self.game_week);
+                Ok(success)
+            }
+            FplResponseType::Binary(_) => Err("Expected JSON response, got binary".into()),
+        }
     }
 }

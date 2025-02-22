@@ -4,7 +4,6 @@ use crate::error::ScraperError;
 use crate::scraper::{Scraper, ScraperOrder, ShouldScrape};
 use crate::NoScrapeReason;
 use async_trait::async_trait;
-use fpl_api::responses::fixtures::GameWeekBonus;
 use sqlx::PgPool;
 use std::sync::Arc;
 use tokio::sync::RwLock;

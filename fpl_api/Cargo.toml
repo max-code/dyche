@@ -15,6 +15,7 @@ tracing = { workspace = true }
 fpl_common = { path = "../fpl_common" }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 governor = { workspace = true }
+async-trait = "0.1.86"
 
 [dev-dependencies]
 tokio = { version = "1.43.0", features = ["full", "macros", "rt", "test-util"] }

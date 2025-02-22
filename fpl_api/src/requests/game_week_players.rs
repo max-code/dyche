@@ -1,8 +1,9 @@
-use super::FplRequest;
+use super::{FplRequest, FplResponseType};
 use crate::responses::game_week_players::{
     GameWeekPlayersStatsResponse, GameWeekPlayersStatsResponseWrapper,
 };
 use fpl_common::types::GameWeekId;
+use serde::de::Error;
 
 #[derive(Debug)]
 pub struct GameWeekPlayersRequest {
@@ -24,18 +25,23 @@ impl FplRequest for GameWeekPlayersRequest {
 
     fn process_response(
         &self,
-        response: serde_json::Value,
-    ) -> Result<Self::Response, serde_json::Error> {
-        let wrapper: GameWeekPlayersStatsResponseWrapper = serde_json::from_value(response)?;
+        response: FplResponseType,
+    ) -> Result<Self::Response, Box<dyn std::error::Error>> {
+        match response {
+            FplResponseType::Json(value) => {
+                let wrapper: GameWeekPlayersStatsResponseWrapper = serde_json::from_value(value)?;
 
-        match wrapper {
-            GameWeekPlayersStatsResponseWrapper::Success(mut response) => {
-                response.game_week = Some(self.game_week);
-                Ok(response)
+                match wrapper {
+                    GameWeekPlayersStatsResponseWrapper::Success(mut response) => {
+                        response.game_week = Some(self.game_week);
+                        Ok(response)
+                    }
+                    GameWeekPlayersStatsResponseWrapper::PlainText(message) => {
+                        Err(Box::new(serde_json::Error::custom(message)))
+                    }
+                }
             }
-            GameWeekPlayersStatsResponseWrapper::PlainText(message) => {
-                Err(serde::de::Error::custom(message))
-            }
+            FplResponseType::Binary(_) => Err("Expected JSON response, got binary".into()),
         }
     }
 }

@@ -1,4 +1,4 @@
-use super::FplRequest;
+use super::{FplRequest, FplResponseType};
 use crate::responses::player::PlayerResponse;
 use fpl_common::types::PlayerId;
 
@@ -22,10 +22,15 @@ impl FplRequest for PlayerRequest {
 
     fn process_response(
         &self,
-        response: serde_json::Value,
-    ) -> Result<Self::Response, serde_json::Error> {
-        let mut resp: PlayerResponse = serde_json::from_value(response)?;
-        resp.player_id = Some(self.player_id);
-        Ok(resp)
+        response: FplResponseType,
+    ) -> Result<Self::Response, Box<dyn std::error::Error>> {
+        match response {
+            FplResponseType::Json(value) => {
+                let mut resp: PlayerResponse = serde_json::from_value(value)?;
+                resp.player_id = Some(self.player_id);
+                Ok(resp)
+            }
+            FplResponseType::Binary(_) => Err("Expected JSON response, got binary".into()),
+        }
     }
 }

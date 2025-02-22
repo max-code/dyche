@@ -1,4 +1,4 @@
-use super::FplRequest;
+use super::{FplRequest, FplResponseType};
 use crate::responses::mini_league::{MiniLeagueResponse, MiniLeagueResponseWrapper};
 use fpl_common::types::LeagueId;
 
@@ -26,13 +26,17 @@ impl FplRequest for MiniLeagueRequest {
 
     fn process_response(
         &self,
-        response: serde_json::Value,
-    ) -> Result<Self::Response, serde_json::Error> {
-        let wrapper: MiniLeagueResponseWrapper = serde_json::from_value(response)?;
-
-        match wrapper {
-            MiniLeagueResponseWrapper::Success(response) => Ok(response),
-            MiniLeagueResponseWrapper::PlainText(message) => Err(serde::de::Error::custom(message)),
+        response: FplResponseType,
+    ) -> Result<Self::Response, Box<dyn std::error::Error>> {
+        match response {
+            FplResponseType::Json(value) => {
+                let wrapper: MiniLeagueResponseWrapper = serde_json::from_value(value)?;
+                match wrapper {
+                    MiniLeagueResponseWrapper::Success(response) => Ok(response),
+                    MiniLeagueResponseWrapper::PlainText(message) => Err(message.into()),
+                }
+            }
+            FplResponseType::Binary(_) => Err("Expected JSON response, got binary".into()),
         }
     }
 }

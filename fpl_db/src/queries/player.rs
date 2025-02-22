@@ -467,3 +467,14 @@ pub async fn get_all_player_ids(pool: &PgPool) -> Result<Vec<PlayerId>, sqlx::Er
 
     Ok(ids)
 }
+
+pub async fn get_all_player_codes(pool: &PgPool) -> Result<Vec<u32>, sqlx::Error> {
+    let ids = sqlx::query!("SELECT code FROM players")
+        .fetch_all(pool)
+        .await?
+        .into_iter()
+        .map(|row| row.code as u32)
+        .collect();
+
+    Ok(ids)
+}

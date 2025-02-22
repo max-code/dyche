@@ -6,7 +6,7 @@ use governor::{
     state::{InMemoryState, NotKeyed},
     Quota, RateLimiter,
 };
-use requests::FplRequest;
+use requests::{FplRequest, FplResponseType};
 use reqwest::Client;
 use serde_json::Value;
 use std::num::NonZeroU32;
@@ -27,6 +27,8 @@ pub enum FplClientError {
     },
     #[error("JSON parsing error (status: {0}, url: {1}): {2}")]
     JsonError(reqwest::StatusCode, String, serde_json::Error),
+    #[error("Binary processing error (status: {0}, url: {1}): {2}")]
+    BinaryError(reqwest::StatusCode, String, std::io::Error),
     #[error("Response body missing extra detail that should have been added in process_response.")]
     MissingExtraDetailError,
 }
@@ -88,11 +90,36 @@ impl FplClient {
         debug!("Making {:?} with URL {}", request, url);
         let response = self.client.get(&url).send().await?;
         let status = response.status();
-        let body = response.text().await?;
-        let value: Value = serde_json::from_str(&body).map_err(|e| (status, &url, e))?;
-        request
-            .process_response(value)
-            .map_err(|e| (status, &url, e).into())
+
+        if request.is_binary() {
+            let bytes = response
+                .bytes()
+                .await
+                .map_err(|e| FplClientError::RequestError {
+                    status: e.status().unwrap_or_default(),
+                    url: url.clone(),
+                    message: e.to_string(),
+                })?;
+
+            request
+                .process_response(FplResponseType::Binary(bytes.to_vec()))
+                .map_err(|e| FplClientError::RequestError {
+                    status,
+                    url,
+                    message: e.to_string(),
+                })
+        } else {
+            let body = response.text().await?;
+            let value: Value = serde_json::from_str(&body).map_err(|e| (status, &url, e))?;
+
+            request
+                .process_response(FplResponseType::Json(value))
+                .map_err(|e| FplClientError::RequestError {
+                    status,
+                    url,
+                    message: e.to_string(),
+                })
+        }
     }
 
     pub fn get_rate_limit_state(&self) -> String {
@@ -114,6 +141,7 @@ mod tests {
     };
 
     use super::*;
+    use crate::requests::PlayerPhotoRequest;
     use crate::requests::TeamGameWeekRequest;
     use crate::requests::TeamRequest;
 
@@ -225,6 +253,22 @@ mod tests {
 
         // Act
         let request = GameStateRequest::default();
+        let response = client.get(request).await.unwrap();
+
+        // Assert
+        println!("Response: {:#?}", response);
+    }
+
+    #[tokio::test]
+    async fn test_player_photo_request() {
+        // Arrange
+        let client = FplClient::new();
+
+        // Act
+        let request = PlayerPhotoRequest::new(
+            166989,
+            "/Users/maxjordan/code/dyche/fpl_bot/static/test_photo.png",
+        );
         let response = client.get(request).await.unwrap();
 
         // Assert

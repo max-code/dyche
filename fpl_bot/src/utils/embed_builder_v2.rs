@@ -35,7 +35,7 @@ impl EmbedState for ProcessingState {
         "<a:loading:1286983242398040125>"
     }
     fn color() -> (u8, u8, u8) {
-        (55, 2, 60)
+        (45, 0, 77)
     }
     fn state_name() -> &'static str {
         "Processing"
@@ -59,7 +59,7 @@ impl EmbedState for SuccessState {
         "<:success:1286991961257148437>"
     }
     fn color() -> (u8, u8, u8) {
-        (0, 255, 135)
+        (0, 255, 136)
     } // Green
     fn state_name() -> &'static str {
         "Success"
