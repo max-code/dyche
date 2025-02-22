@@ -4,6 +4,7 @@ use crate::error::ScraperError;
 use crate::scraper::{Scraper, ScraperOrder, ShouldScrape};
 use crate::NoScrapeReason;
 use async_trait::async_trait;
+use fpl_api::responses::fixtures::GameWeekBonus;
 use sqlx::PgPool;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -12,8 +13,8 @@ use tracing::{debug, info};
 use fpl_api::requests::FixtureRequest;
 use fpl_api::FplClient;
 
-use fpl_db::models::Fixture;
-use fpl_db::queries::fixture::upsert_fixtures;
+use fpl_db::models::{Bonus, Fixture};
+use fpl_db::queries::fixture::{upsert_bonuses, upsert_fixtures};
 
 pub struct FixturesScraper {
     pool: Arc<PgPool>,
@@ -70,6 +71,22 @@ impl Scraper for FixturesScraper {
     async fn scrape(&self) -> Result<(), ScraperError> {
         let request = FixtureRequest::new();
         let fixtures = self.client.get(request).await?;
+
+        let bonuses = fixtures
+            .iter()
+            .flat_map(|fixture| fixture.bonuses.iter())
+            .map(Bonus::from)
+            .collect::<Vec<Bonus>>();
+
+        debug!(
+            "[{}] Got {} Fixtures from the API. Converted to {} Bonus rows for upsertion.",
+            self.name(),
+            fixtures.len(),
+            bonuses.len()
+        );
+        upsert_bonuses(&self.pool, &bonuses)
+            .await
+            .map_err(ScraperError::DatabaseError)?;
 
         let fixtures_rows: Vec<Fixture> = fixtures.iter().map(|f| f.into()).collect();
 

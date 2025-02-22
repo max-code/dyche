@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
-use fpl_api::responses::fixtures::GameweekFixture;
-use fpl_common::types::{ClubId, FixtureId, GameWeekId};
+use fpl_api::responses::fixtures::{GameWeekBonus, GameweekFixture};
+use fpl_common::types::{ClubId, FixtureId, GameWeekId, PlayerId};
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct Fixture {
@@ -39,6 +39,25 @@ impl From<&GameweekFixture> for Fixture {
             team_h_difficulty: fixture.team_h_difficulty,
             team_a_difficulty: fixture.team_a_difficulty,
             pulse_id: fixture.pulse_id,
+        }
+    }
+}
+
+#[derive(Debug, sqlx::FromRow)]
+pub struct Bonus {
+    pub fixture_id: FixtureId,
+    pub player_id: PlayerId,
+    pub bps: i16,
+    pub bonus: i16,
+}
+
+impl From<&GameWeekBonus> for Bonus {
+    fn from(value: &GameWeekBonus) -> Self {
+        Self {
+            fixture_id: value.fixture_id,
+            player_id: value.player_id,
+            bps: value.bps,
+            bonus: value.bonus,
         }
     }
 }

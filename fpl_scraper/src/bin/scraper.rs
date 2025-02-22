@@ -30,7 +30,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let one_minute = Duration::from_secs(60);
     let five_minutes = Duration::from_secs(60 * 5);
     let thirty_minutes = Duration::from_secs(60 * 30);
-    let one_hour = Duration::from_secs(60 * 60);
 
     // First
     let game_state_scraper =
@@ -38,7 +37,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     manager.register_scraper(game_state_scraper);
 
     // Second
-    let fixtures_scraper = FixturesScraper::new(Arc::clone(&pool), Arc::clone(&client), one_hour);
+    let fixtures_scraper = FixturesScraper::new(Arc::clone(&pool), Arc::clone(&client), one_minute);
     manager.register_scraper(fixtures_scraper);
 
     let teams_scraper = TeamsScraper::new(Arc::clone(&pool), Arc::clone(&client), five_minutes);

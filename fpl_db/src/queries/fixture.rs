@@ -2,7 +2,7 @@ use fpl_common::types::GameWeekId;
 use sqlx::PgPool;
 use tracing::debug;
 
-use crate::models::fixture::Fixture;
+use crate::models::{fixture::Fixture, Bonus};
 
 pub async fn upsert_fixtures(pool: &PgPool, fixtures: &[Fixture]) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await?;
@@ -41,6 +41,33 @@ pub async fn upsert_fixtures(pool: &PgPool, fixtures: &[Fixture]) -> Result<(), 
             fixture.team_h_difficulty,
             fixture.team_a_difficulty,
             fixture.pulse_id
+        )
+        .execute(&mut *tx)
+        .await?;
+    }
+    tx.commit().await?;
+    debug!("Upsert Completed");
+    Ok(())
+}
+
+pub async fn upsert_bonuses(pool: &PgPool, bonuses: &[Bonus]) -> Result<(), sqlx::Error> {
+    let mut tx = pool.begin().await?;
+    debug!("Upserting {} Bonus rows", bonuses.len());
+    for bonus in bonuses {
+        sqlx::query!(
+            r#"
+           INSERT INTO bonus (
+               fixture_id, player_id, bps, bonus
+           )
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (fixture_id, player_id) DO UPDATE SET
+               bps = EXCLUDED.bps,
+               bonus = EXCLUDED.bonus
+           "#,
+            i16::from(bonus.fixture_id),
+            i16::from(bonus.player_id),
+            bonus.bps,
+            bonus.bonus
         )
         .execute(&mut *tx)
         .await?;

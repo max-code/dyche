@@ -1,11 +1,9 @@
 use crate::autocompletes::{autocomplete_mini_league, autocomplete_overall_or_week};
 use crate::images::{TableData, TableRenderer};
-use crate::utils::embed_builder::EmbedBuilder;
 use crate::utils::embed_builder_v2::Embed;
 use crate::{log_call, log_timer, start_timer, Context, Error};
 use sqlx::FromRow;
 use std::cmp::Reverse;
-use std::path::Path;
 use std::time::Instant;
 use tracing::{debug, info};
 
