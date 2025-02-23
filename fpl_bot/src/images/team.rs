@@ -9,28 +9,34 @@ use usvg::{Options, Tree};
 use crate::images::util::PlayerInfo;
 
 use super::{
-    colours::{GREEN_COLOUR, PURPLE_COLOUR, WHITE_COLOUR},
+    colours::{GREEN_COLOUR, PITCH_GREEN_COLOUR, PURPLE_COLOUR, WHITE_COLOUR},
     CenteredTextBox, CornerRounding, FontWeight,
 };
 
 #[derive(Debug, Clone)]
 pub struct TransferInfo {
+    pub player_in_name: String,
     pub player_in_code: u32,
     pub player_in_cost: f64,
+    pub player_out_name: String,
     pub player_out_code: u32,
     pub player_out_cost: f64,
 }
 
 impl TransferInfo {
     pub fn new(
+        player_in_name: String,
         player_in_code: u32,
         player_in_cost: f64,
+        player_out_name: String,
         player_out_code: u32,
         player_out_cost: f64,
     ) -> Self {
         Self {
+            player_in_name,
             player_in_code,
             player_in_cost,
+            player_out_name,
             player_out_code,
             player_out_cost,
         }
@@ -201,6 +207,10 @@ pub struct TeamRenderer {
     pub chip_box_height: f64,
     pub side_box_height: f64,
     pub side_box_padding: f64,
+    pub transfer_row_image_height: f64,
+    pub transfer_row_image_width: f64,
+    pub transfer_row_horizontal_padding: f64,
+    pub transfer_row_vertical_padding: f64,
 }
 
 impl Default for TeamRenderer {
@@ -218,16 +228,22 @@ impl Default for TeamRenderer {
             chip_box_height: 25.0,
             side_box_height: 50.0,
             side_box_padding: 25.0,
+            transfer_row_image_height: 175.0,
+            transfer_row_image_width: 150.0,
+            transfer_row_horizontal_padding: 75.0,
+            transfer_row_vertical_padding: 25.0,
         }
     }
 }
 
 impl TeamRenderer {
     pub async fn render(&self, data: TeamData, path: &str) -> std::io::Result<()> {
-        let total_height = self.header_height
-            + (5 * self.player_card_height)
-            + (6 * self.player_card_vertical_padding)
-            + (data.transfers.len() as u32 * self.transfer_row_height);
+        let header_height = self.header_height + self.header_vertical_padding;
+        let players_height =
+            (5 * self.player_card_height) + (6 * self.player_card_vertical_padding);
+        let transfers_height = (data.transfers.len() as u32 * self.transfer_row_height)
+            + (2 * self.transfer_row_vertical_padding as u32);
+        let total_height = self.header_height + players_height + transfers_height;
 
         // TODO: Reset these to self.width and self.height
         let mut document: svg::node::element::SVG = Document::new()
@@ -239,20 +255,32 @@ impl TeamRenderer {
             .set("x", 0)
             .set("y", 0)
             .set("width", "100%")
-            .set("height", self.header_height + self.header_vertical_padding)
+            .set("height", header_height)
             .set("fill", WHITE_COLOUR);
 
         let content_background = Rectangle::new()
             .set("x", 0)
-            .set("y", self.header_height + self.header_vertical_padding)
+            .set("y", header_height)
             .set("width", "100%")
-            .set("height", total_height - self.header_height)
-            .set("fill", "#4ac24c");
+            .set("height", players_height)
+            .set("fill", PITCH_GREEN_COLOUR);
+        // .set("fill", "#4ac24c");
 
-        document = document.add(header_background).add(content_background);
+        let transfers_background = Rectangle::new()
+            .set("x", 0)
+            .set("y", players_height + header_height)
+            .set("width", "100%")
+            .set("height", transfers_height)
+            .set("fill", PURPLE_COLOUR);
+
+        document = document
+            .add(header_background)
+            .add(content_background)
+            .add(transfers_background);
 
         document = self.add_header(&data, document)?;
         document = self.add_player_cards(&data, document)?;
+        document = self.add_transfers(&data, document)?;
 
         let svg_string = document.to_string();
         let mut opt: Options<'_> = Options::default();
@@ -452,6 +480,89 @@ impl TeamRenderer {
         document = document
             .add(overall_rank_title_bg)
             .add(overall_rank_title_text);
+
+        Ok(document)
+    }
+
+    fn add_transfers(
+        &self,
+        data: &TeamData,
+        mut document: Document,
+    ) -> Result<Document, std::io::Error> {
+        let mut y_offset = self.header_height
+            + (5 * self.player_card_height)
+            + (6 * self.player_card_vertical_padding)
+            + self.transfer_row_vertical_padding as u32;
+
+        for transfer in &data.transfers {
+            let row_y = y_offset as f64
+                + ((self.transfer_row_height as f64 - self.transfer_row_image_height) / 2.0);
+
+            let out_image_x = self.transfer_row_horizontal_padding;
+            let out_image_path = format!(
+                "/Users/maxjordan/code/dyche/fpl_assets/player_images/{}.png",
+                transfer.player_out_code
+            );
+            let out_image = svg::node::element::Image::new()
+                .set("x", out_image_x)
+                .set("y", row_y)
+                .set("width", self.transfer_row_image_width)
+                .set("height", self.transfer_row_image_height)
+                .set("href", out_image_path)
+                .set("preserveAspectRatio", "xMidYMid meet");
+
+            let in_image_x = self.width as f64
+                - self.transfer_row_image_width
+                - self.transfer_row_horizontal_padding;
+            let in_image_path = format!(
+                "/Users/maxjordan/code/dyche/fpl_assets/player_images/{}.png",
+                transfer.player_in_code
+            );
+            let in_image = svg::node::element::Image::new()
+                .set("x", in_image_x)
+                .set("y", row_y)
+                .set("width", self.transfer_row_image_width)
+                .set("height", self.transfer_row_image_height)
+                .set("href", in_image_path)
+                .set("preserveAspectRatio", "xMidYMid meet");
+
+            let transfer_text = format!(
+                "{} (£{}) —› {} (£{})",
+                transfer.player_out_name,
+                transfer.player_out_cost,
+                transfer.player_in_name,
+                transfer.player_in_cost
+            );
+
+            let transfer_text_row_height = self.transfer_row_image_height * 0.4;
+            let (transfer_text_bg, transfer_text_box) = CenteredTextBox::new()
+                .text(transfer_text)
+                .dimensions(
+                    self.width as f64
+                        - ((4.0 * self.transfer_row_horizontal_padding)
+                            + (2.0 * self.transfer_row_image_width)),
+                    transfer_text_row_height,
+                )
+                .position(
+                    (2.0 * self.transfer_row_horizontal_padding) + self.transfer_row_image_width,
+                    row_y + transfer_text_row_height,
+                )
+                .background_color(WHITE_COLOUR)
+                .font_color(PURPLE_COLOUR)
+                .font_weight(FontWeight::SemiBold)
+                .corner_rounding(CornerRounding::All)
+                .radius(self.score_box_radius)
+                .inner_padding(0.95)
+                .build()?;
+
+            document = document
+                .add(in_image)
+                .add(out_image)
+                .add(transfer_text_bg)
+                .add(transfer_text_box);
+
+            y_offset += self.transfer_row_height;
+        }
 
         Ok(document)
     }

@@ -36,7 +36,7 @@ pub struct PlayerInfo {
     pub games: Vec<PlayerGameInfo>,
     pub captain: bool,
     pub vice_captain: bool,
-    pub multiplier: bool,
+    pub multiplier: i16,
 }
 
 impl PlayerInfo {
@@ -46,7 +46,7 @@ impl PlayerInfo {
         games: Vec<PlayerGameInfo>,
         captain: bool,
         vice_captain: bool,
-        multiplier: bool,
+        multiplier: i16,
     ) -> Self {
         Self {
             name,

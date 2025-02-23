@@ -1,6 +1,6 @@
 use fpl_bot::images::team::{TeamData, TeamRenderer};
 use fpl_bot::images::util::{PlayerGameInfo, PlayerInfo};
-use fpl_bot::images::GameStatus;
+use fpl_bot::images::{GameStatus, TransferInfo};
 use fpl_common::types::{Chip, GameWeekId};
 
 #[tokio::main]
@@ -18,7 +18,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             vec![PlayerGameInfo::Status(GameStatus::Played(6))],
             false,
             false,
-            false,
+            1,
         ))
         // Defenders
         .add_defender(PlayerInfo::new(
@@ -27,7 +27,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             vec![PlayerGameInfo::Fixture("NEW (H)".to_string())],
             false,
             false,
-            false,
+            1,
         ))
         .add_defender(PlayerInfo::new(
             "Salah".to_string(),
@@ -35,7 +35,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             vec![PlayerGameInfo::Status(GameStatus::NotPlayed)],
             false,
             false,
-            false,
+            1,
         ))
         .add_defender(PlayerInfo::new(
             "Salah".to_string(),
@@ -43,7 +43,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             vec![PlayerGameInfo::Fixture("ARS (A)".to_string())],
             false,
             false,
-            false,
+            1,
         ))
         // Midfielders
         .add_midfielder(PlayerInfo::new(
@@ -52,7 +52,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             vec![PlayerGameInfo::Status(GameStatus::Played(12))],
             true,
             false,
-            true,
+            2,
         ))
         .add_midfielder(PlayerInfo::new(
             "Salah".to_string(),
@@ -63,7 +63,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ],
             false,
             true,
-            false,
+            1,
         ))
         .add_midfielder(PlayerInfo::new(
             "Salah".to_string(),
@@ -71,7 +71,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             vec![PlayerGameInfo::Status(GameStatus::Played(6))],
             false,
             false,
-            false,
+            1,
         ))
         .add_midfielder(PlayerInfo::new(
             "Salah".to_string(),
@@ -79,7 +79,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             vec![PlayerGameInfo::Fixture("TOT (A)".to_string())],
             false,
             false,
-            false,
+            1,
         ))
         .add_midfielder(PlayerInfo::new(
             "Salah".to_string(),
@@ -87,7 +87,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             vec![PlayerGameInfo::Status(GameStatus::Played(6))],
             false,
             false,
-            false,
+            1,
         ))
         // Forwards
         .add_forward(PlayerInfo::new(
@@ -96,7 +96,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             vec![PlayerGameInfo::Status(GameStatus::Played(6))],
             false,
             false,
-            false,
+            1,
         ))
         .add_forward(PlayerInfo::new(
             "Salah".to_string(),
@@ -104,7 +104,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             vec![PlayerGameInfo::Fixture("CHE (H)".to_string())],
             false,
             false,
-            false,
+            1,
         ))
         // Bench
         .add_bench_player(PlayerInfo::new(
@@ -113,7 +113,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             vec![PlayerGameInfo::Status(GameStatus::NotPlayed)],
             false,
             false,
-            false,
+            1,
         ))
         .add_bench_player(PlayerInfo::new(
             "Salah".to_string(),
@@ -121,7 +121,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             vec![PlayerGameInfo::Fixture("EVE (A)".to_string())],
             false,
             false,
-            false,
+            1,
         ))
         .add_bench_player(PlayerInfo::new(
             "Salah".to_string(),
@@ -132,7 +132,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ],
             false,
             false,
-            false,
+            1,
         ))
         .add_bench_player(PlayerInfo::new(
             "Salah".to_string(),
@@ -143,7 +143,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ],
             false,
             false,
-            false,
+            1,
         ))
         .add_manager(PlayerInfo::new(
             "Slot".to_string(),
@@ -151,9 +151,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             vec![PlayerGameInfo::Fixture("BHA (H)".to_string())],
             false,
             false,
-            false,
+            1,
         ))
         .add_chip(Chip::AssMan)
+        .add_transfer(TransferInfo::new(
+            "Salah".to_string(),
+            118748,
+            10.9,
+            "Saka".to_string(),
+            223340,
+            10.2,
+        ))
+        .add_transfer(TransferInfo::new(
+            "Sels".to_string(),
+            85633,
+            5.4,
+            "Raya".to_string(),
+            154561,
+            10.2,
+        ))
         .build()?;
 
     let renderer = TeamRenderer::default();
