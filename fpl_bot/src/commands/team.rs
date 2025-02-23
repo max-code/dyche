@@ -1,7 +1,7 @@
 use std::{collections::HashMap, str::FromStr, time::Instant};
 
 use fpl_bot::images::{
-    GameStatus, PlayerGameInfo, PlayerInfo, TeamData, TeamDataBuilder, TeamRenderer,
+    GameStatus, PlayerGameInfo, PlayerInfo, TeamData, TeamDataBuilder, TeamRenderer, TransferInfo,
 };
 use fpl_common::types::{Chip, GameWeekId, PlayerPosition};
 use fpl_db::queries::game_week::get_current_game_week;
@@ -60,6 +60,7 @@ async fn get_team_data(
     let mut data = TeamData::builder();
     data = get_basic_team_data(ctx, user_id, game_week_id, data).await?;
     data = get_player_data(ctx, user_id, game_week_id, data).await?;
+    data = get_transfers_data(ctx, user_id, game_week_id, data).await?;
     Ok(data.build()?)
 }
 
@@ -292,6 +293,42 @@ async fn get_player_data(
                 return Err("Position > 16 on team game week pick!".into());
             }
         }
+    }
+
+    Ok(team_data)
+}
+
+async fn get_transfers_data(
+    ctx: Context<'_>,
+    user_id: i64,
+    game_week: i16,
+    mut team_data: TeamDataBuilder,
+) -> Result<TeamDataBuilder, Error> {
+    let transfers: Vec<TransferInfo> = sqlx::query_as!(
+        TransferInfo,
+        r#"
+    SELECT 
+        player_in.web_name as "player_in_name!",
+        player_in.code as "player_in_code!",
+        (t.player_in_cost::float8 / 10) as "player_in_cost!",
+        player_out.web_name as "player_out_name!",
+        player_out.code as "player_out_code!",
+        (t.player_out_cost::float8 / 10) as "player_out_cost!"
+    FROM 
+        transfers t
+        LEFT JOIN players player_in ON t.player_in_id = player_in.id
+        LEFT JOIN players player_out ON t.player_out_id = player_out.id
+        left join discord_users du on du.team_id = t.team_id 
+        WHERE t.game_week_id = $1 and du.discord_id = $2;
+    "#,
+        game_week,
+        user_id
+    )
+    .fetch_all(&*ctx.data().pool)
+    .await?;
+
+    for transfer in transfers {
+        team_data = team_data.add_transfer(transfer);
     }
 
     Ok(team_data)

@@ -1,5 +1,6 @@
 use fpl_common::types::{Chip, GameWeekId};
 use resvg::{render, usvg};
+use sqlx::prelude::FromRow;
 use svg::node::element::Rectangle;
 use svg::Document;
 use thousands::Separable;
@@ -9,27 +10,29 @@ use usvg::{Options, Tree};
 use crate::images::util::PlayerInfo;
 
 use super::{
-    colours::{GREEN_COLOUR, PITCH_GREEN_COLOUR, PURPLE_COLOUR, WHITE_COLOUR},
+    colours::{
+        DARK_PITCH_GREEN_COLOUR, GREEN_COLOUR, PITCH_GREEN_COLOUR, PURPLE_COLOUR, WHITE_COLOUR,
+    },
     CenteredTextBox, CornerRounding, FontWeight,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, FromRow)]
 pub struct TransferInfo {
     pub player_in_name: String,
-    pub player_in_code: u32,
+    pub player_in_code: i32,
     pub player_in_cost: f64,
     pub player_out_name: String,
-    pub player_out_code: u32,
+    pub player_out_code: i32,
     pub player_out_cost: f64,
 }
 
 impl TransferInfo {
     pub fn new(
         player_in_name: String,
-        player_in_code: u32,
+        player_in_code: i32,
         player_in_cost: f64,
         player_out_name: String,
-        player_out_code: u32,
+        player_out_code: i32,
         player_out_cost: f64,
     ) -> Self {
         Self {
@@ -240,10 +243,11 @@ impl TeamRenderer {
     pub async fn render(&self, data: TeamData, path: &str) -> std::io::Result<()> {
         let header_height = self.header_height + self.header_vertical_padding;
         let players_height =
-            (5 * self.player_card_height) + (6 * self.player_card_vertical_padding);
+            (4 * self.player_card_height) + (5 * self.player_card_vertical_padding);
+        let bench_height = self.player_card_height + self.player_card_vertical_padding;
         let transfers_height = (data.transfers.len() as u32 * self.transfer_row_height)
             + (2 * self.transfer_row_vertical_padding as u32);
-        let total_height = self.header_height + players_height + transfers_height;
+        let total_height = self.header_height + players_height + bench_height + transfers_height;
 
         // TODO: Reset these to self.width and self.height
         let mut document: svg::node::element::SVG = Document::new()
@@ -258,24 +262,31 @@ impl TeamRenderer {
             .set("height", header_height)
             .set("fill", WHITE_COLOUR);
 
-        let content_background = Rectangle::new()
+        let players_background = Rectangle::new()
             .set("x", 0)
             .set("y", header_height)
             .set("width", "100%")
             .set("height", players_height)
             .set("fill", PITCH_GREEN_COLOUR);
-        // .set("fill", "#4ac24c");
+
+        let bench_background = Rectangle::new()
+            .set("x", 0)
+            .set("y", header_height + players_height)
+            .set("width", "100%")
+            .set("height", bench_height)
+            .set("fill", DARK_PITCH_GREEN_COLOUR);
 
         let transfers_background = Rectangle::new()
             .set("x", 0)
-            .set("y", players_height + header_height)
+            .set("y", players_height + header_height + bench_height)
             .set("width", "100%")
             .set("height", transfers_height)
             .set("fill", PURPLE_COLOUR);
 
         document = document
             .add(header_background)
-            .add(content_background)
+            .add(players_background)
+            .add(bench_background)
             .add(transfers_background);
 
         document = self.add_header(&data, document)?;
@@ -311,8 +322,11 @@ impl TeamRenderer {
         mut document: Document,
     ) -> Result<Document, std::io::Error> {
         let mut y_offset = self.header_height + (2 * self.header_vertical_padding);
-        for row in data.get_player_rows() {
+        for (idx, row) in data.get_player_rows().iter().enumerate() {
             let xs = self.calculate_player_card_xs(row.len());
+            if idx == 4 {
+                y_offset += self.player_card_vertical_padding;
+            }
 
             for (x_offset, player) in xs.iter().zip(row.iter()) {
                 let player_card = player.to_card_svg(
@@ -547,7 +561,7 @@ impl TeamRenderer {
                     (2.0 * self.transfer_row_horizontal_padding) + self.transfer_row_image_width,
                     row_y + transfer_text_row_height,
                 )
-                .background_color(WHITE_COLOUR)
+                .background_color(GREEN_COLOUR)
                 .font_color(PURPLE_COLOUR)
                 .font_weight(FontWeight::SemiBold)
                 .corner_rounding(CornerRounding::All)

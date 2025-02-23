@@ -1,6 +1,6 @@
 use svg::node::element::{Group, Rectangle};
 
-use crate::images::colours::{GREY_COLOUR, WHITE_COLOUR};
+use crate::images::colours::{GREEN_COLOUR, GREY_COLOUR, WHITE_COLOUR};
 
 use super::super::constants::colours::PURPLE_COLOUR;
 use super::{CenteredTextBox, CornerRounding};
@@ -80,7 +80,7 @@ impl PlayerInfo {
             .set("rx", border_radius)
             .set("ry", border_radius)
             .set("fill", "rgba(27, 12, 12, 0.1)")
-            .set("stroke", "rgba(255, 255, 255, 0.3)")
+            .set("stroke", GREEN_COLOUR)
             .set("stroke-width", 2);
 
         // Player image
