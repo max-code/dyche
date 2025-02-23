@@ -44,7 +44,7 @@ pub async fn table(
     let timer: Instant = start_timer!();
 
     let mut embed = Embed::new(ctx)?
-        .title("Processing table request...")
+        .title("Processing table request")
         .processing();
 
     embed.send().await?;
