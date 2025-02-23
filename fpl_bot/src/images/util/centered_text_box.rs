@@ -1,13 +1,41 @@
+use super::{super::fonts::FPL_FONT_NAME, FontWeight};
+use font_kit::{
+    family_name::FamilyName,
+    handle::Handle,
+    properties::{Properties, Weight},
+    source::SystemSource,
+};
 use rusttype::{point, Font, Scale};
-use std::fs::read as read_file;
-use std::path::PathBuf;
-use svg::node::element::{Rectangle, Text};
+use std::io;
+use svg::node::element::path::Data;
+use svg::node::element::Path;
+use svg::node::element::Text;
 
-use super::super::fonts::FPL_FONT_NAME;
+/*
+move_to((a, b))
+-Sets the starting point to coordinate (a, b).
+horizontal_line_to(x)
+-Draws a horizontal line from the current point to x (y remains unchanged).
+vertical_line_to(y)
+-Draws a vertical line from the current point to y (x remains unchanged).
+elliptical_arc_by((rx, ry, rotation, large_arc_flag, sweep_flag, dx, dy))
+-Draws an arc relative to the current point where:
+-rx, ry: the radii of the ellipse in x and y directions
+-rotation: the x-axis rotation of the ellipse (in degrees)
+-large_arc_flag: 0 for an arc ≤180°, 1 for >180°
+-sweep_flag: 0 for counterclockwise, 1 for clockwise
+-dx, dy: the relative offset to the arc's end point
+close()
+-Closes the path by drawing a line back to the starting point.
+*/
 
-pub struct TextMetrics {
-    width: f64,
-    height: f64,
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CornerRounding {
+    #[default]
+    All,
+    Top,
+    Bottom,
+    None,
 }
 
 #[derive(Default)]
@@ -19,7 +47,16 @@ pub struct CenteredTextBox {
     y: f64,
     background_color: String,
     font_color: String,
-    font_path: PathBuf,
+    font_family: String,
+    font_weight: FontWeight,
+    corner_rounding: CornerRounding,
+    radius: f64,
+    inner_padding: f64,
+}
+
+pub struct TextMetrics {
+    width: f64,
+    height: f64,
 }
 
 impl CenteredTextBox {
@@ -32,9 +69,11 @@ impl CenteredTextBox {
             y: 0.0,
             background_color: String::from("#800080"),
             font_color: String::from("#000000"),
-            font_path: PathBuf::from(
-                "/Users/maxjordan/code/dyche/fpl_assets/fonts/Radikal-Bold.otf",
-            ),
+            font_family: FPL_FONT_NAME.to_string(),
+            font_weight: FontWeight::SemiBold,
+            corner_rounding: CornerRounding::None,
+            radius: 10.0,
+            inner_padding: 0.85,
         }
     }
 
@@ -65,8 +104,28 @@ impl CenteredTextBox {
         self
     }
 
-    pub fn font_path(mut self, path: impl Into<PathBuf>) -> Self {
-        self.font_path = path.into();
+    pub fn font_weight(mut self, weight: FontWeight) -> Self {
+        self.font_weight = weight;
+        self
+    }
+
+    pub fn font_family(mut self, family: &str) -> Self {
+        self.font_family = family.into();
+        self
+    }
+
+    pub fn corner_rounding(mut self, rounding: CornerRounding) -> Self {
+        self.corner_rounding = rounding;
+        self
+    }
+
+    pub fn radius(mut self, radius: f64) -> Self {
+        self.radius = radius;
+        self
+    }
+
+    pub fn inner_padding(mut self, padding: f64) -> Self {
+        self.inner_padding = padding;
         self
     }
 
@@ -113,7 +172,9 @@ impl CenteredTextBox {
             let mid = (low + high) / 2.0;
             let metrics = self.measure_text(&self.text, mid, font_data);
 
-            if metrics.width > self.width * 0.85 || metrics.height > self.height * 0.85 {
+            if metrics.width > self.width * self.inner_padding
+                || metrics.height > self.height * self.inner_padding
+            {
                 high = mid;
             } else {
                 low = mid;
@@ -123,32 +184,108 @@ impl CenteredTextBox {
         low
     }
 
-    pub fn build(&self) -> Result<(Rectangle, Text), std::io::Error> {
-        let font_data = read_file(&self.font_path)?;
+    pub fn build(&self) -> Result<(Path, Text), std::io::Error> {
+        let family = FamilyName::Title(self.font_family.clone());
+        let weight_val: u16 = self.font_weight.to_number().parse().map_err(|e| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("Invalid font weight: {}", e),
+            )
+        })?;
+        let properties = Properties {
+            weight: Weight(weight_val as f32),
+            ..Properties::default()
+        };
 
-        // Create the background rectangle
-        let rect = Rectangle::new()
-            .set("x", self.x)
-            .set("y", self.y)
-            .set("width", self.width)
-            .set("height", self.height)
+        let handle = SystemSource::new()
+            .select_best_match(&[family], &properties)
+            .map_err(|e| io::Error::new(io::ErrorKind::NotFound, e.to_string()))?;
+
+        let font_data = match handle {
+            Handle::Path {
+                path,
+                font_index: _,
+            } => std::fs::read(&path)?,
+            Handle::Memory {
+                bytes,
+                font_index: _,
+            } => bytes.to_vec(),
+        };
+
+        let data = match self.corner_rounding {
+            CornerRounding::All => Data::new()
+                .move_to((self.x + self.radius, self.y))
+                .horizontal_line_to(self.x + self.width - self.radius)
+                .elliptical_arc_by((self.radius, self.radius, 0, 0, 1, self.radius, self.radius))
+                .vertical_line_to(self.y + self.height - self.radius)
+                .elliptical_arc_by((self.radius, self.radius, 0, 0, 1, -self.radius, self.radius))
+                .horizontal_line_to(self.x + self.radius)
+                .elliptical_arc_by((
+                    self.radius,
+                    self.radius,
+                    0,
+                    0,
+                    1,
+                    -self.radius,
+                    -self.radius,
+                ))
+                .vertical_line_to(self.y + self.radius)
+                .elliptical_arc_by((self.radius, self.radius, 0, 0, 1, self.radius, -self.radius))
+                .close(),
+            CornerRounding::Top => Data::new()
+                .move_to((self.x + self.radius, self.y))
+                .horizontal_line_to(self.x + self.width - self.radius)
+                .elliptical_arc_by((self.radius, self.radius, 0, 0, 1, self.radius, self.radius))
+                .vertical_line_to(self.y + self.height)
+                .horizontal_line_to(self.x)
+                .vertical_line_to(self.y + self.radius)
+                .elliptical_arc_by((self.radius, self.radius, 0, 0, 1, self.radius, -self.radius))
+                .close(),
+            CornerRounding::Bottom => Data::new()
+                .move_to((self.x, self.y))
+                .horizontal_line_to(self.x + self.width)
+                .vertical_line_to(self.y + self.height - self.radius)
+                .elliptical_arc_by((self.radius, self.radius, 0, 0, 1, -self.radius, self.radius))
+                .horizontal_line_to(self.x + self.radius)
+                .elliptical_arc_by((
+                    self.radius,
+                    self.radius,
+                    0,
+                    0,
+                    1,
+                    -self.radius,
+                    -self.radius,
+                ))
+                .vertical_line_to(self.y)
+                .close(),
+            CornerRounding::None => Data::new()
+                .move_to((self.x, self.y))
+                .horizontal_line_to(self.x + self.width)
+                .vertical_line_to(self.y + self.height)
+                .horizontal_line_to(self.x)
+                .vertical_line_to(self.y)
+                .close(),
+        };
+
+        let path = Path::new()
+            .set("d", data)
             .set("fill", self.background_color.clone());
 
-        // Calculate optimal font size and center positions
         let font_size = self.calculate_optimal_font_size(&font_data);
+
         let x_centered = self.x + (self.width / 2.0);
         let y_centered = self.y + (self.height / 2.0);
 
-        // Create the text element
         let text_element = Text::new(&self.text)
             .set("x", x_centered)
             .set("y", y_centered)
-            .set("font-family", FPL_FONT_NAME)
+            .set("font-family", self.font_family.as_str())
+            .set("font-weight", self.font_weight.to_number())
             .set("font-size", font_size)
             .set("fill", self.font_color.clone())
             .set("text-anchor", "middle")
-            .set("dominant-baseline", "central");
+            .set("dominant-baseline", "mathematical");
 
-        Ok((rect, text_element))
+        Ok((path, text_element))
     }
 }

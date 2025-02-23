@@ -1,16 +1,17 @@
-use fpl_common::types::Chip;
+use fpl_common::types::{Chip, GameWeekId};
 use resvg::{render, usvg};
-use svg::node::element::{Group, Rectangle, Text};
+use svg::node::element::Rectangle;
 use svg::Document;
+use thousands::Separable;
 use tiny_skia::Pixmap;
 use usvg::{Options, Tree};
 
-use crate::images::constants::colours::PURPLE_COLOUR;
-use crate::images::constants::fonts::FPL_FONT_NAME;
-
 use crate::images::util::PlayerInfo;
 
-use super::player_card;
+use super::{
+    colours::{GREEN_COLOUR, PURPLE_COLOUR, WHITE_COLOUR},
+    CenteredTextBox, CornerRounding, FontWeight,
+};
 
 #[derive(Debug, Clone)]
 pub struct TransferInfo {
@@ -41,6 +42,8 @@ pub struct TeamDataBuilder {
     team_name: Option<String>,
     gw_rank: Option<i64>,
     overall_rank: Option<i64>,
+    points: Option<i64>,
+    game_week: Option<GameWeekId>,
     goalkeeper: Option<PlayerInfo>,
     defenders: Vec<PlayerInfo>,
     midfielders: Vec<PlayerInfo>,
@@ -68,6 +71,16 @@ impl TeamDataBuilder {
 
     pub fn overall_rank(mut self, rank: i64) -> Self {
         self.overall_rank = Some(rank);
+        self
+    }
+
+    pub fn points(mut self, points: i64) -> Self {
+        self.points = Some(points);
+        self
+    }
+
+    pub fn game_week(mut self, gw: GameWeekId) -> Self {
+        self.game_week = Some(gw);
         self
     }
 
@@ -112,15 +125,19 @@ impl TeamDataBuilder {
     }
 
     pub fn build(self) -> Result<TeamData, &'static str> {
-        let team_name = self.team_name.ok_or("Team name is required")?;
-        let gw_rank = self.gw_rank.ok_or("Gameweek rank is required")?;
-        let overall_rank = self.overall_rank.ok_or("Overall rank is required")?;
-        let goalkeeper = self.goalkeeper.ok_or("Goalkeeper is required")?;
+        let team_name = self.team_name.ok_or("Team Name Required")?;
+        let gw_rank = self.gw_rank.ok_or("GW Rank Required")?;
+        let overall_rank = self.overall_rank.ok_or("Overall Rank Required")?;
+        let points = self.points.ok_or("Points Required")?;
+        let game_week = self.game_week.ok_or("Game Week Required")?;
+        let goalkeeper = self.goalkeeper.ok_or("Goalkeeper Required")?;
 
         Ok(TeamData {
             team_name,
             gw_rank,
             overall_rank,
+            points,
+            game_week,
             goalkeeper,
             defenders: self.defenders,
             midfielders: self.midfielders,
@@ -138,6 +155,8 @@ pub struct TeamData {
     pub team_name: String,
     pub gw_rank: i64,
     pub overall_rank: i64,
+    pub points: i64,
+    pub game_week: GameWeekId,
     pub goalkeeper: PlayerInfo,
     pub defenders: Vec<PlayerInfo>,
     pub midfielders: Vec<PlayerInfo>,
@@ -176,6 +195,12 @@ pub struct TeamRenderer {
     pub player_card_vertical_padding: u32,
     pub transfer_row_height: u32,
     pub header_height: u32,
+    pub header_vertical_padding: u32,
+    pub score_box_side_length: f64,
+    pub score_box_radius: f64,
+    pub chip_box_height: f64,
+    pub side_box_height: f64,
+    pub side_box_padding: f64,
 }
 
 impl Default for TeamRenderer {
@@ -186,7 +211,13 @@ impl Default for TeamRenderer {
             player_card_width: 150,
             player_card_vertical_padding: 50,
             transfer_row_height: 200,
-            header_height: 300,
+            header_height: 200,
+            header_vertical_padding: 25,
+            score_box_side_length: 150.0,
+            score_box_radius: 10.0,
+            chip_box_height: 25.0,
+            side_box_height: 50.0,
+            side_box_padding: 25.0,
         }
     }
 }
@@ -195,24 +226,32 @@ impl TeamRenderer {
     pub async fn render(&self, data: TeamData, path: &str) -> std::io::Result<()> {
         let total_height = self.header_height
             + (5 * self.player_card_height)
-            + (5 * self.player_card_vertical_padding)
+            + (6 * self.player_card_vertical_padding)
             + (data.transfers.len() as u32 * self.transfer_row_height);
 
         // TODO: Reset these to self.width and self.height
         let mut document: svg::node::element::SVG = Document::new()
-            .set("viewBox", (0, 0, 1000, total_height))
-            .set("width", 1000)
+            .set("viewBox", (0, 0, self.width, total_height))
+            .set("width", self.width)
             .set("height", total_height);
 
-        let background = Rectangle::new()
+        let header_background = Rectangle::new()
             .set("x", 0)
             .set("y", 0)
             .set("width", "100%")
-            .set("height", "100%")
+            .set("height", self.header_height + self.header_vertical_padding)
+            .set("fill", WHITE_COLOUR);
+
+        let content_background = Rectangle::new()
+            .set("x", 0)
+            .set("y", self.header_height + self.header_vertical_padding)
+            .set("width", "100%")
+            .set("height", total_height - self.header_height)
             .set("fill", "#4ac24c");
 
-        document = document.add(background);
+        document = document.add(header_background).add(content_background);
 
+        document = self.add_header(&data, document)?;
         document = self.add_player_cards(&data, document)?;
 
         let svg_string = document.to_string();
@@ -243,7 +282,7 @@ impl TeamRenderer {
         data: &TeamData,
         mut document: Document,
     ) -> Result<Document, std::io::Error> {
-        let mut y_offset = self.header_height + self.player_card_vertical_padding;
+        let mut y_offset = self.header_height + (2 * self.header_vertical_padding);
         for row in data.get_player_rows() {
             let xs = self.calculate_player_card_xs(row.len());
 
@@ -258,6 +297,161 @@ impl TeamRenderer {
             }
             y_offset += self.player_card_height + self.player_card_vertical_padding;
         }
+
+        Ok(document)
+    }
+
+    fn add_header(
+        &self,
+        data: &TeamData,
+        mut document: Document,
+    ) -> Result<Document, std::io::Error> {
+        let rounding = match data.chip {
+            Some(_) => CornerRounding::Top,
+            None => CornerRounding::All,
+        };
+
+        // POINTS BOX
+        let (points_bg, points_text) = CenteredTextBox::new()
+            .text(data.points.to_string())
+            .dimensions(self.score_box_side_length, self.score_box_side_length)
+            .position(
+                (self.width as f64 - self.score_box_side_length) / 2.0,
+                (self.header_height as f64 - self.score_box_side_length) / 2.0,
+            )
+            .background_color(PURPLE_COLOUR)
+            .font_color(GREEN_COLOUR)
+            .font_weight(FontWeight::Bold)
+            .corner_rounding(rounding)
+            .radius(self.score_box_radius)
+            .build()?;
+
+        document = document.add(points_bg).add(points_text);
+
+        // CHIP
+        if let Some(chip) = data.chip {
+            let (chip_bg, chip_text) = CenteredTextBox::new()
+                .text(chip.pretty_name())
+                .dimensions(self.score_box_side_length, self.chip_box_height)
+                .position(
+                    (self.width as f64 - self.score_box_side_length) / 2.0,
+                    self.header_height as f64 - self.chip_box_height,
+                )
+                .background_color(GREEN_COLOUR)
+                .font_color(PURPLE_COLOUR)
+                .font_weight(FontWeight::Regular)
+                .corner_rounding(CornerRounding::Bottom)
+                .radius(self.score_box_radius)
+                .build()?;
+
+            document = document.add(chip_bg).add(chip_text);
+        }
+
+        let main_box_y = (self.header_height as f64 - self.side_box_height) / 2.0;
+        let sub_box_y = main_box_y + self.side_box_height;
+
+        // TEAM NAME
+        let team_name_box_width = ((self.width as f64 - self.score_box_side_length) / 2.0)
+            - (2.0 * self.side_box_padding);
+        let (team_name_bg, team_name_text) = CenteredTextBox::new()
+            .text(&data.team_name)
+            .dimensions(team_name_box_width, self.side_box_height)
+            .position(self.side_box_padding, main_box_y)
+            .background_color(WHITE_COLOUR)
+            .font_color(PURPLE_COLOUR)
+            .font_weight(FontWeight::SemiBold)
+            .corner_rounding(CornerRounding::All)
+            .radius(self.score_box_radius)
+            .inner_padding(0.95)
+            .build()?;
+
+        document = document.add(team_name_bg).add(team_name_text);
+
+        // GWXY thing
+        let (game_week_bg, game_week_text) = CenteredTextBox::new()
+            .text(format!("GW{}", data.game_week))
+            .dimensions(team_name_box_width / 4.0, self.side_box_height / 1.75)
+            .position(
+                self.side_box_padding + (team_name_box_width * 0.375),
+                sub_box_y,
+            )
+            .background_color(PURPLE_COLOUR)
+            .font_color(GREEN_COLOUR)
+            .font_weight(FontWeight::Bold)
+            .corner_rounding(CornerRounding::All)
+            .radius(self.score_box_radius)
+            .inner_padding(0.90)
+            .build()?;
+
+        document = document.add(game_week_bg).add(game_week_text);
+
+        // GW RANK
+        let rank_box_width = (((self.width as f64 - self.score_box_side_length) / 2.0)
+            - (3.0 * self.side_box_padding))
+            / 2.0;
+        let game_week_rank_x =
+            ((self.width as f64 + self.score_box_side_length) / 2.0) + self.side_box_padding;
+        let (game_week_rank_bg, game_week_rank_text) = CenteredTextBox::new()
+            .text(data.gw_rank.separate_with_commas())
+            .dimensions(rank_box_width, self.side_box_height)
+            .position(game_week_rank_x, main_box_y)
+            .background_color(WHITE_COLOUR)
+            .font_color(PURPLE_COLOUR)
+            .font_weight(FontWeight::SemiBold)
+            .corner_rounding(CornerRounding::All)
+            .radius(self.score_box_radius)
+            .inner_padding(0.95)
+            .build()?;
+
+        document = document.add(game_week_rank_bg).add(game_week_rank_text);
+
+        let (game_week_rank_title_bg, game_week_rank_title_text) = CenteredTextBox::new()
+            .text("GW Rank".to_string())
+            .dimensions(rank_box_width / 2.0, self.side_box_height / 1.75)
+            .position(game_week_rank_x + (rank_box_width * 0.25), sub_box_y)
+            .background_color(PURPLE_COLOUR)
+            .font_color(GREEN_COLOUR)
+            .font_weight(FontWeight::Bold)
+            .corner_rounding(CornerRounding::All)
+            .radius(self.score_box_radius)
+            .inner_padding(0.90)
+            .build()?;
+
+        document = document
+            .add(game_week_rank_title_bg)
+            .add(game_week_rank_title_text);
+
+        // OVERALL RANK
+        let overall_rank_x = game_week_rank_x + rank_box_width + self.side_box_padding;
+        let (overall_rank_bg, overall_rank_text) = CenteredTextBox::new()
+            .text(data.overall_rank.separate_with_commas())
+            .dimensions(rank_box_width, self.side_box_height)
+            .position(overall_rank_x, main_box_y)
+            .background_color(WHITE_COLOUR)
+            .font_color(PURPLE_COLOUR)
+            .font_weight(FontWeight::SemiBold)
+            .corner_rounding(CornerRounding::All)
+            .radius(self.score_box_radius)
+            .inner_padding(0.95)
+            .build()?;
+
+        document = document.add(overall_rank_bg).add(overall_rank_text);
+
+        let (overall_rank_title_bg, overall_rank_title_text) = CenteredTextBox::new()
+            .text("Rank".to_string())
+            .dimensions(rank_box_width / 2.0, self.side_box_height / 1.75)
+            .position(overall_rank_x + (rank_box_width * 0.25), sub_box_y)
+            .background_color(PURPLE_COLOUR)
+            .font_color(GREEN_COLOUR)
+            .font_weight(FontWeight::Bold)
+            .corner_rounding(CornerRounding::All)
+            .radius(self.score_box_radius)
+            .inner_padding(0.90)
+            .build()?;
+
+        document = document
+            .add(overall_rank_title_bg)
+            .add(overall_rank_title_text);
 
         Ok(document)
     }

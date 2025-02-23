@@ -7,7 +7,7 @@ use usvg::{Options, Tree};
 use crate::images::constants::colours::PURPLE_COLOUR;
 use crate::images::constants::fonts::FPL_FONT_NAME;
 
-use super::colours::GREEN_COLOUR;
+use super::colours::{GREEN_COLOUR, OFF_WHITE_COLOUR, WHITE_COLOUR};
 
 #[derive(Debug, Clone)]
 pub struct TableRow {
@@ -111,7 +111,7 @@ impl TableRenderer {
             .set("x", self.width / 2)
             .set("y", self.title_height / 2 + 10) // +10 for vertical centering
             .set("text-anchor", "middle")
-            .set("fill", "#FFFFFF")
+            .set("fill", WHITE_COLOUR)
             .set("font-family", FPL_FONT_NAME)
             .set("font-weight", "900")
             .set("font-size", "32");
@@ -182,7 +182,11 @@ impl TableRenderer {
             let y_pos = self.title_height + self.header_height + (index as u32 * self.row_height);
 
             // Row background
-            let bg_color = if index % 2 == 0 { "#FFFFFF" } else { "#F0F0F0" };
+            let bg_color = if index % 2 == 0 {
+                WHITE_COLOUR
+            } else {
+                OFF_WHITE_COLOUR
+            };
             let row_bg_colour = if row.caller { GREEN_COLOUR } else { bg_color };
             let row_bg = Rectangle::new()
                 .set("x", 0)

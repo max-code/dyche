@@ -29,6 +29,9 @@ fontdb = "0.23.0"
 serde_json.workspace = true
 base64 = "0.22.1"
 rusttype = "0.9.3"
+fontkit = "0.5.2"
+font-kit = "0.14.2"
+thousands = "0.2.0"
 
 [[bin]]
 name = "render_table_test"

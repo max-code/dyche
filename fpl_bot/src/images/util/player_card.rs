@@ -1,21 +1,29 @@
-use svg::node::element::{Group, Rectangle, Text};
+use svg::node::element::{Group, Rectangle};
 
-use crate::images::colours::GREY_COLOUR;
+use crate::images::colours::{GREY_COLOUR, WHITE_COLOUR};
 
 use super::super::constants::colours::PURPLE_COLOUR;
-use super::super::constants::fonts::FPL_FONT_NAME;
-use super::CenteredTextBox;
+use super::{CenteredTextBox, CornerRounding};
+
+#[derive(Debug, Clone)]
+pub enum GameStatus {
+    NotPlayed,
+    Played(i16),
+}
 
 #[derive(Debug, Clone)]
 pub enum PlayerGameInfo {
-    Points(i16),
+    Status(GameStatus),
     Fixture(String),
 }
 
 impl PlayerGameInfo {
     fn pretty_str(&self) -> String {
         match self {
-            PlayerGameInfo::Points(points) => format!("{} pts", points),
+            PlayerGameInfo::Status(status) => match status {
+                GameStatus::NotPlayed => "-".to_string(),
+                GameStatus::Played(points) => format!("{} pts", points),
+            },
             PlayerGameInfo::Fixture(fixture) => fixture.clone(),
         }
     }
@@ -61,7 +69,7 @@ impl PlayerInfo {
         let text_row_height = (height - image_height) / 2;
         let border_radius = 8;
 
-        let mut group = Group::new();
+        let group = Group::new();
 
         // Semi-transparent border with more visible border
         let background = Rectangle::new()
@@ -71,7 +79,7 @@ impl PlayerInfo {
             .set("height", height)
             .set("rx", border_radius)
             .set("ry", border_radius)
-            .set("fill", "rgba(255, 255, 255, 0.1)")
+            .set("fill", "rgba(27, 12, 12, 0.1)")
             .set("stroke", "rgba(255, 255, 255, 0.3)")
             .set("stroke-width", 2);
 
@@ -100,9 +108,8 @@ impl PlayerInfo {
             .text(&name)
             .dimensions(width.into(), text_row_height.into())
             .position(x.into(), name_y.into())
-            .background_color("#FFFFFF")
+            .background_color(WHITE_COLOUR)
             .font_color(PURPLE_COLOUR)
-            .font_path("/Users/maxjordan/code/dyche/fpl_assets/fonts/Radikal-Bold.otf")
             .build()?;
 
         // BOTTOM ROW: Game Info (pts or opponent)
@@ -116,7 +123,7 @@ impl PlayerInfo {
         let status_bg_colour = match self
             .games
             .iter()
-            .any(|f| matches!(f, PlayerGameInfo::Points(_)))
+            .any(|f| matches!(f, PlayerGameInfo::Status(GameStatus::Played(_))))
         {
             true => PURPLE_COLOUR,
             false => GREY_COLOUR,
@@ -128,8 +135,9 @@ impl PlayerInfo {
             .dimensions(width.into(), text_row_height.into())
             .position(x.into(), status_y.into())
             .background_color(status_bg_colour)
-            .font_color("#FFFFFF")
-            .font_path("/Users/maxjordan/code/dyche/fpl_assets/fonts/Radikal-Bold.otf")
+            .font_color(WHITE_COLOUR)
+            .corner_rounding(CornerRounding::Bottom)
+            .radius(border_radius as f64)
             .build()?;
 
         // Assemble all elements in correct order

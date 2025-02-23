@@ -1,18 +1,21 @@
 use fpl_bot::images::team::{TeamData, TeamRenderer};
 use fpl_bot::images::util::{PlayerGameInfo, PlayerInfo};
-use fpl_common::types::Chip;
+use fpl_bot::images::GameStatus;
+use fpl_common::types::{Chip, GameWeekId};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let team = TeamData::builder()
-        .team_name("Hakimi Matata")
+        .team_name("BellinghamsDisciples")
         .gw_rank(123456)
         .overall_rank(234567)
+        .points(112)
+        .game_week(GameWeekId::new(26)?)
         // Keeper
         .goalkeeper(PlayerInfo::new(
             "Alexander-Arnold".to_string(),
             118748,
-            vec![PlayerGameInfo::Points(6)],
+            vec![PlayerGameInfo::Status(GameStatus::Played(6))],
             false,
             false,
             false,
@@ -29,7 +32,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_defender(PlayerInfo::new(
             "Salah".to_string(),
             118748,
-            vec![PlayerGameInfo::Points(2)],
+            vec![PlayerGameInfo::Status(GameStatus::NotPlayed)],
             false,
             false,
             false,
@@ -46,7 +49,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_midfielder(PlayerInfo::new(
             "Salah".to_string(),
             118748,
-            vec![PlayerGameInfo::Points(12)],
+            vec![PlayerGameInfo::Status(GameStatus::Played(12))],
             true,
             false,
             true,
@@ -54,7 +57,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_midfielder(PlayerInfo::new(
             "Salah".to_string(),
             118748,
-            vec![PlayerGameInfo::Fixture("MUN (H)".to_string())],
+            vec![
+                PlayerGameInfo::Status(GameStatus::NotPlayed),
+                PlayerGameInfo::Fixture("NFO (H)".to_string()),
+            ],
             false,
             true,
             false,
@@ -62,7 +68,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_midfielder(PlayerInfo::new(
             "Salah".to_string(),
             118748,
-            vec![PlayerGameInfo::Points(3)],
+            vec![PlayerGameInfo::Status(GameStatus::Played(6))],
             false,
             false,
             false,
@@ -78,7 +84,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_midfielder(PlayerInfo::new(
             "Salah".to_string(),
             118748,
-            vec![PlayerGameInfo::Points(8)],
+            vec![PlayerGameInfo::Status(GameStatus::Played(6))],
             false,
             false,
             false,
@@ -87,7 +93,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_forward(PlayerInfo::new(
             "Salah".to_string(),
             118748,
-            vec![PlayerGameInfo::Points(6)],
+            vec![PlayerGameInfo::Status(GameStatus::Played(6))],
             false,
             false,
             false,
@@ -104,7 +110,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_bench_player(PlayerInfo::new(
             "Salah".to_string(),
             118748,
-            vec![PlayerGameInfo::Points(0)],
+            vec![PlayerGameInfo::Status(GameStatus::NotPlayed)],
             false,
             false,
             false,
@@ -120,7 +126,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_bench_player(PlayerInfo::new(
             "Salah".to_string(),
             118748,
-            vec![PlayerGameInfo::Points(1)],
+            vec![
+                PlayerGameInfo::Status(GameStatus::Played(6)),
+                PlayerGameInfo::Status(GameStatus::NotPlayed),
+            ],
             false,
             false,
             false,
@@ -128,7 +137,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_bench_player(PlayerInfo::new(
             "Salah".to_string(),
             118748,
-            vec![PlayerGameInfo::Fixture("BHA (H)".to_string())],
+            vec![
+                PlayerGameInfo::Status(GameStatus::Played(6)),
+                PlayerGameInfo::Fixture("BHA (H)".to_string()),
+            ],
             false,
             false,
             false,
