@@ -1,4 +1,5 @@
 use crate::autocompletes::{autocomplete_mini_league, autocomplete_overall_or_week};
+use crate::commands::get_image_file_path;
 use crate::images::{TableData, TableRenderer};
 use crate::utils::embed_builder_v2::Embed;
 use crate::{log_call, log_timer, start_timer, Context, Error};
@@ -89,17 +90,12 @@ pub async fn table(
         }
     }
 
+    let file_name = get_image_file_path(COMMAND, &ctx);
     let renderer = TableRenderer::default();
-    renderer
-        .render(data, "/Users/maxjordan/code/dyche/fpl_bot/table.png")
-        .await?;
+    renderer.render(data, &file_name).await?;
     log_timer!(timer, COMMAND, ctx, "rendered image");
 
-    embed
-        .image("/Users/maxjordan/code/dyche/fpl_bot/table.png")
-        .success()
-        .send()
-        .await?;
+    embed.image(file_name).success().send().await?;
     Ok(())
 }
 

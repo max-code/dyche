@@ -8,7 +8,10 @@ use fpl_db::queries::game_week::get_current_game_week;
 use serenity::all::User;
 use tracing::debug;
 
-use crate::{log_call, log_timer, start_timer, utils::embed_builder_v2::Embed, Context, Error};
+use crate::{
+    commands::get_image_file_path, log_call, log_timer, start_timer,
+    utils::embed_builder_v2::Embed, Context, Error,
+};
 
 const COMMAND: &str = "/team";
 
@@ -37,17 +40,19 @@ pub async fn team(
         None => i64::from(ctx.author().id),
     };
 
-    let data: TeamData = get_team_data(ctx, user_id, game_week_id).await?;
-    let file_name = format!(
-        "/Users/maxjordan/code/dyche/fpl_bot/team_{}.png",
-        ctx.author().id
-    );
+    let data: TeamData = get_team_data(ctx, user_id, game_week_id, &timer).await?;
+    let file_name = get_image_file_path(COMMAND, &ctx);
 
     let renderer = TeamRenderer::default();
     renderer.render(data, &file_name).await?;
     log_timer!(timer, COMMAND, ctx, "rendered image");
 
-    embed.image(file_name).success().send().await?;
+    embed
+        .image(file_name)
+        .title(format!("Team for GW{}", game_week_id))
+        .success()
+        .send()
+        .await?;
 
     Ok(())
 }
@@ -56,11 +61,15 @@ async fn get_team_data(
     ctx: Context<'_>,
     user_id: i64,
     game_week_id: i16,
+    timer: &Instant,
 ) -> Result<TeamData, Error> {
     let mut data = TeamData::builder();
     data = get_basic_team_data(ctx, user_id, game_week_id, data).await?;
+    log_timer!(timer, COMMAND, ctx, "Got basic team data");
     data = get_player_data(ctx, user_id, game_week_id, data).await?;
+    log_timer!(timer, COMMAND, ctx, "Got player data");
     data = get_transfers_data(ctx, user_id, game_week_id, data).await?;
+    log_timer!(timer, COMMAND, ctx, "Got transfers data");
     Ok(data.build()?)
 }
 

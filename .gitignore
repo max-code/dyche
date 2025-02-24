@@ -36,3 +36,4 @@ Cargo.lock
 venv/
 test_scripts
 fpl_assets/
+fpl_bot/generated/

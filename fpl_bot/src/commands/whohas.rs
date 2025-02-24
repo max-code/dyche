@@ -240,7 +240,7 @@ async fn get_whohas_club(
 
             let mut result = Vec::new();
             result.push(format!(
-                "**{club_name} assets in GW{}__**\n",
+                "**__{club_name} assets in GW{}__**\n",
                 current_game_week.id
             ));
 
@@ -250,7 +250,7 @@ async fn get_whohas_club(
                     .map(|(user_name, team_name)| format!("{user_name} ({team_name})"))
                     .collect::<Vec<_>>()
                     .join(", ");
-                format!("**{}** - {}", player, users_formatted)
+                format!("- **{}:** {}", player, users_formatted)
             }));
 
             result
