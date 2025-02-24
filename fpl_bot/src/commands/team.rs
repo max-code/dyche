@@ -248,6 +248,8 @@ async fn get_player_data(
     results.sort_by_key(|r| r.player_id);
     results.dedup_by_key(|r| r.player_id);
 
+    let mut bench_players = Vec::new();
+
     for result in results {
         let game_info = player_games
             .get(&result.player_id)
@@ -284,8 +286,10 @@ async fn get_player_data(
                 },
                 Err(e) => return Err(e.into()),
             },
-            // Bench
-            12..=15 => team_data = team_data.add_bench_player(player_info),
+            // Bench - collect for later
+            12..=15 => {
+                bench_players.push((result.position, player_info));
+            }
             16 => {
                 team_data = team_data.add_manager(player_info);
             }
@@ -293,6 +297,12 @@ async fn get_player_data(
                 return Err("Position > 16 on team game week pick!".into());
             }
         }
+    }
+
+    // Sort bench players by position and add them in order
+    bench_players.sort_by_key(|(pos, _)| *pos);
+    for (_, player_info) in bench_players {
+        team_data = team_data.add_bench_player(player_info);
     }
 
     Ok(team_data)

@@ -210,7 +210,6 @@ pub struct TeamRenderer {
     pub chip_box_height: f64,
     pub side_box_height: f64,
     pub side_box_padding: f64,
-    pub transfer_row_image_height: f64,
     pub transfer_row_image_width: f64,
     pub transfer_row_horizontal_padding: f64,
     pub transfer_row_vertical_padding: f64,
@@ -223,7 +222,6 @@ impl Default for TeamRenderer {
             player_card_height: 200,
             player_card_width: 150,
             player_card_vertical_padding: 50,
-            transfer_row_height: 200,
             header_height: 200,
             header_vertical_padding: 25,
             score_box_side_length: 150.0,
@@ -231,9 +229,9 @@ impl Default for TeamRenderer {
             chip_box_height: 25.0,
             side_box_height: 50.0,
             side_box_padding: 25.0,
-            transfer_row_image_height: 175.0,
-            transfer_row_image_width: 150.0,
-            transfer_row_horizontal_padding: 75.0,
+            transfer_row_height: 100,
+            transfer_row_image_width: 100.0,
+            transfer_row_horizontal_padding: 50.0,
             transfer_row_vertical_padding: 25.0,
         }
     }
@@ -245,8 +243,9 @@ impl TeamRenderer {
         let players_height =
             (4 * self.player_card_height) + (5 * self.player_card_vertical_padding);
         let bench_height = self.player_card_height + self.player_card_vertical_padding;
-        let transfers_height = (data.transfers.len() as u32 * self.transfer_row_height)
-            + (2 * self.transfer_row_vertical_padding as u32);
+        let transfer_rows = ((data.transfers.len() + 1) / 2) as u32;
+        let transfers_height = ((transfer_rows + 1) * self.transfer_row_height)
+            + (transfer_rows * self.transfer_row_vertical_padding as u32);
         let total_height = self.header_height + players_height + bench_height + transfers_height;
 
         // TODO: Reset these to self.width and self.height
@@ -281,7 +280,7 @@ impl TeamRenderer {
             .set("y", players_height + header_height + bench_height)
             .set("width", "100%")
             .set("height", transfers_height)
-            .set("fill", PURPLE_COLOUR);
+            .set("fill", WHITE_COLOUR);
 
         document = document
             .add(header_background)
@@ -503,79 +502,149 @@ impl TeamRenderer {
         data: &TeamData,
         mut document: Document,
     ) -> Result<Document, std::io::Error> {
-        let mut y_offset = self.header_height
-            + (5 * self.player_card_height)
-            + (6 * self.player_card_vertical_padding)
-            + self.transfer_row_vertical_padding as u32;
+        let mut y_offset = self.header_height as f64
+            + (5.0 * self.player_card_height as f64)
+            + (6.0 * self.player_card_vertical_padding as f64)
+            + self.transfer_row_vertical_padding;
 
-        for transfer in &data.transfers {
-            let row_y = y_offset as f64
-                + ((self.transfer_row_height as f64 - self.transfer_row_image_height) / 2.0);
+        let (title_bg, title_text_box) = CenteredTextBox::new()
+            .text("Transfers")
+            .dimensions(200.0, self.transfer_row_vertical_padding * 2.0)
+            .position(400.0, y_offset)
+            .background_color(PURPLE_COLOUR)
+            .font_color(WHITE_COLOUR)
+            .font_weight(FontWeight::Bold)
+            .corner_rounding(CornerRounding::Bottom)
+            .radius(self.score_box_radius)
+            .inner_padding(0.95)
+            .build()?;
 
-            let out_image_x = self.transfer_row_horizontal_padding;
-            let out_image_path = format!(
-                "/Users/maxjordan/code/dyche/fpl_assets/player_images/{}.png",
-                transfer.player_out_code
-            );
-            let out_image = svg::node::element::Image::new()
-                .set("x", out_image_x)
-                .set("y", row_y)
-                .set("width", self.transfer_row_image_width)
-                .set("height", self.transfer_row_image_height)
-                .set("href", out_image_path)
-                .set("preserveAspectRatio", "xMidYMid meet");
+        document = document.add(title_bg).add(title_text_box);
 
-            let in_image_x = self.width as f64
-                - self.transfer_row_image_width
-                - self.transfer_row_horizontal_padding;
-            let in_image_path = format!(
-                "/Users/maxjordan/code/dyche/fpl_assets/player_images/{}.png",
-                transfer.player_in_code
-            );
-            let in_image = svg::node::element::Image::new()
-                .set("x", in_image_x)
-                .set("y", row_y)
-                .set("width", self.transfer_row_image_width)
-                .set("height", self.transfer_row_image_height)
-                .set("href", in_image_path)
-                .set("preserveAspectRatio", "xMidYMid meet");
+        y_offset += self.transfer_row_vertical_padding;
 
-            let transfer_text = format!(
-                "{} (£{}) —› {} (£{})",
-                transfer.player_out_name,
-                transfer.player_out_cost,
-                transfer.player_in_name,
-                transfer.player_in_cost
-            );
+        // 1 or 2 blocks, but always have them have the same width
+        // for 2 blocks the row looks like
+        // [padding] [[image] [text] [image]] [padding] [[image] [text] [image]] [padding]
+        // padding and images have set width, text fills that width
+        let transfer_block_width =
+            (self.width as f64 - (3.0 * self.transfer_row_horizontal_padding)) / 2.0;
+        let transfer_text_width = transfer_block_width - (2.0 * self.transfer_row_image_width);
 
-            let transfer_text_row_height = self.transfer_row_image_height * 0.4;
-            let (transfer_text_bg, transfer_text_box) = CenteredTextBox::new()
-                .text(transfer_text)
-                .dimensions(
-                    self.width as f64
-                        - ((4.0 * self.transfer_row_horizontal_padding)
-                            + (2.0 * self.transfer_row_image_width)),
-                    transfer_text_row_height,
-                )
-                .position(
-                    (2.0 * self.transfer_row_horizontal_padding) + self.transfer_row_image_width,
-                    row_y + transfer_text_row_height,
-                )
-                .background_color(GREEN_COLOUR)
-                .font_color(PURPLE_COLOUR)
-                .font_weight(FontWeight::SemiBold)
-                .corner_rounding(CornerRounding::All)
-                .radius(self.score_box_radius)
-                .inner_padding(0.95)
-                .build()?;
+        let mut is_first_chunk = true;
 
-            document = document
-                .add(in_image)
-                .add(out_image)
-                .add(transfer_text_bg)
-                .add(transfer_text_box);
+        for transfer_chunk in data.transfers.chunks(2) {
+            if !is_first_chunk {
+                // Draw a separator line before this chunk (except for the first chunk)
+                let line_width = self.width as f64 - (2.0 * self.transfer_row_horizontal_padding);
+                let line_x_start = (self.width as f64 - line_width) / 2.0;
+                let line_x_end = line_x_start + line_width;
 
-            y_offset += self.transfer_row_height;
+                let separator_line = svg::node::element::Line::new()
+                    .set("x1", line_x_start)
+                    .set(
+                        "y1",
+                        y_offset + (self.transfer_row_height as f64 / 2.0)
+                            - self.transfer_row_vertical_padding / 2.0,
+                    )
+                    .set("x2", line_x_end)
+                    .set(
+                        "y2",
+                        y_offset + (self.transfer_row_height as f64 / 2.0)
+                            - self.transfer_row_vertical_padding / 2.0,
+                    )
+                    .set("stroke", PURPLE_COLOUR)
+                    .set("stroke-width", 2);
+
+                document = document.add(separator_line);
+            } else {
+                is_first_chunk = false;
+            }
+
+            let mut row_x = if transfer_chunk.len() == 2 {
+                self.transfer_row_horizontal_padding
+            } else {
+                (self.width as f64 - transfer_block_width) / 2.0
+            };
+
+            let row_y: f64 = y_offset + (self.transfer_row_height as f64 / 2.0);
+
+            for transfer in transfer_chunk {
+                let out_image_path = format!(
+                    "/Users/maxjordan/code/dyche/fpl_assets/player_images/{}.png",
+                    transfer.player_out_code
+                );
+                let out_image = svg::node::element::Image::new()
+                    .set("x", row_x)
+                    .set("y", row_y)
+                    .set("width", self.transfer_row_image_width)
+                    .set("height", self.transfer_row_height)
+                    .set("href", out_image_path)
+                    .set("preserveAspectRatio", "xMidYMid meet");
+
+                row_x += self.transfer_row_image_width;
+
+                let transfer_text = format!(
+                    "{} —› {}",
+                    transfer.player_out_name, transfer.player_in_name,
+                );
+
+                let (transfer_text_bg, transfer_text_box) = CenteredTextBox::new()
+                    .text(transfer_text)
+                    .dimensions(transfer_text_width, self.transfer_row_height as f64 * 0.65)
+                    .position(row_x, row_y)
+                    .background_color(WHITE_COLOUR)
+                    .font_color(PURPLE_COLOUR)
+                    .font_weight(FontWeight::Bold)
+                    .inner_padding(0.95)
+                    .build()?;
+
+                let transfer_cost_text = format!(
+                    "£{} —› £{}",
+                    transfer.player_out_cost, transfer.player_in_cost,
+                );
+
+                let (transfer_cost_bg, transfer_cost_box) = CenteredTextBox::new()
+                    .text(transfer_cost_text)
+                    .dimensions(
+                        transfer_text_width * 0.7,
+                        self.transfer_row_height as f64 * 0.35,
+                    )
+                    .position(
+                        row_x + (transfer_text_width * 0.15),
+                        row_y + (self.transfer_row_height as f64 * 0.65),
+                    )
+                    .background_color(PURPLE_COLOUR)
+                    .font_color(GREEN_COLOUR)
+                    .font_weight(FontWeight::ExtraBold)
+                    .corner_rounding(CornerRounding::All)
+                    .build()?;
+
+                row_x += transfer_text_width;
+                let in_image_path = format!(
+                    "/Users/maxjordan/code/dyche/fpl_assets/player_images/{}.png",
+                    transfer.player_in_code
+                );
+                let in_image = svg::node::element::Image::new()
+                    .set("x", row_x)
+                    .set("y", row_y)
+                    .set("width", self.transfer_row_image_width)
+                    .set("height", self.transfer_row_height)
+                    .set("href", in_image_path)
+                    .set("preserveAspectRatio", "xMidYMid meet");
+
+                document = document
+                    .add(in_image)
+                    .add(out_image)
+                    .add(transfer_text_bg)
+                    .add(transfer_text_box)
+                    .add(transfer_cost_bg)
+                    .add(transfer_cost_box);
+
+                row_x += self.transfer_row_image_width + self.transfer_row_horizontal_padding;
+            }
+
+            y_offset += self.transfer_row_height as f64 + self.transfer_row_vertical_padding;
         }
 
         Ok(document)

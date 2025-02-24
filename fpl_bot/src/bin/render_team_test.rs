@@ -170,6 +170,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             154561,
             10.2,
         ))
+        .add_transfer(TransferInfo::new(
+            "Raya".to_string(),
+            85633,
+            5.4,
+            "Sels".to_string(),
+            154561,
+            10.2,
+        ))
         .build()?;
 
     let renderer = TeamRenderer::default();
