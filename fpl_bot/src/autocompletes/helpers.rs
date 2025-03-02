@@ -31,7 +31,7 @@ pub(crate) async fn get_club_name_autocompletes<'a>(
     partial: &'a str,
     as_string: bool,
 ) -> impl Iterator<Item = serenity::AutocompleteChoice> + 'a {
-    let club_names = (sqlx::query!("SELECT name, id FROM clubs")
+    let club_names = (sqlx::query!("SELECT name, id FROM clubs ORDER BY name ASC")
         .map(|row| (row.name, row.id))
         .fetch_all(&*ctx.data().pool)
         .await)
@@ -51,15 +51,17 @@ pub(crate) async fn get_player_name_autocompletes<'a>(
     partial: &'a str,
     as_string: bool,
 ) -> impl Iterator<Item = serenity::AutocompleteChoice> + 'a {
-    let player_names = (sqlx::query!("SELECT first_name, second_name, web_name, id FROM players",)
-        .map(|row| {
-            (
-                format!("{} {} ({})", row.first_name, row.second_name, row.web_name),
-                row.id,
-            )
-        })
-        .fetch_all(&*ctx.data().pool)
-        .await)
+    let player_names = (sqlx::query!(
+        "SELECT first_name, second_name, web_name, id FROM players ORDER BY web_name ASC",
+    )
+    .map(|row| {
+        (
+            format!("{} {} ({})", row.first_name, row.second_name, row.web_name),
+            row.id,
+        )
+    })
+    .fetch_all(&*ctx.data().pool)
+    .await)
         .unwrap_or_default();
 
     let matcher = SkimMatcherV2::default();

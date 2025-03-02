@@ -1,7 +1,7 @@
 use crate::autocompletes::{autocomplete_mini_league, autocomplete_overall_or_week};
 use crate::commands::get_image_file_path;
 use crate::images::{TableData, TableRenderer};
-use crate::utils::embed_builder_v2::Embed;
+use crate::utils::embed::{Embed, EmbedPage};
 use crate::{log_call, log_timer, start_timer, Context, Error};
 use sqlx::FromRow;
 use std::cmp::Reverse;
@@ -44,11 +44,11 @@ pub async fn table(
     );
     let timer: Instant = start_timer!();
 
-    let mut embed = Embed::new(ctx)?
+    let embed = Embed::from_ctx(ctx)?
+        .processing()
         .title("Processing table request")
-        .processing();
-
-    embed.send().await?;
+        .send()
+        .await?;
 
     let mut live_points = get_points(&ctx, league_id).await?;
     live_points.sort_by_key(|lp| {
@@ -95,7 +95,11 @@ pub async fn table(
     renderer.render(data, &file_name).await?;
     log_timer!(timer, COMMAND, ctx, "rendered image");
 
-    embed.image(file_name).success().send().await?;
+    embed
+        .success()
+        .add_page(EmbedPage::new().with_image(file_name))
+        .send()
+        .await?;
     Ok(())
 }
 

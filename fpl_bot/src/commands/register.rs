@@ -1,4 +1,4 @@
-use crate::utils::embed_builder::{EmbedBuilder, Processing};
+use crate::utils::embed::{Embed, SentState};
 use crate::{log_call, log_timer, start_timer};
 use crate::{Context, Error};
 use std::time::Instant;
@@ -15,8 +15,6 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::{debug, info, warn};
-
-use poise::{CreateReply, ReplyHandle};
 
 use fpl_api::requests::{MiniLeagueRequest, TeamGameWeekRequest, TeamRequest};
 use fpl_api::FplClient;
@@ -37,30 +35,36 @@ pub async fn register(
     log_call!(COMMAND, ctx, "team_id", team_id);
     let timer = start_timer!();
 
-    let embed = EmbedBuilder::new(
-        COMMAND,
-        format!(
+    let embed = Embed::from_ctx(ctx)?
+        .processing()
+        .title("Registering")
+        .body(format!(
             "Registering user {} with Team ID {}",
             ctx.author().name,
             team_id
-        )
-        .as_str(),
-    );
-
-    let message = ctx
-        .send(CreateReply::default().embed(embed.clone().build()))
+        ))
+        .send()
         .await?;
 
-    check_user_registered(&ctx, &message, embed.clone()).await?;
+    let embed = check_user_registered(&ctx, embed).await?;
     log_timer!(timer, COMMAND, ctx, "checked already registered");
 
-    let embed = embed.update("Fetching team information.");
-    message
-        .edit(ctx, CreateReply::default().embed(embed.clone().build()))
+    let embed = embed
+        .processing()
+        .title("Registering")
+        .body("Fetching team information.")
+        .send()
         .await?;
 
-    let team = get_and_upsert_team_information(&ctx, &message, embed.clone(), team_id).await?;
-    get_and_upsert_team_game_week_information(&ctx, &message, embed.clone(), team_id).await?;
+    let (embed, team) = get_and_upsert_team_information(&ctx, embed, team_id).await?;
+    let embed = embed
+        .processing()
+        .title("Registering")
+        .body("Fetching team game week information.")
+        .send()
+        .await?;
+
+    process_team_game_week_data(&ctx.data().pool, &ctx.data().client, team_id).await?;
     log_timer!(
         timer,
         COMMAND,
@@ -68,18 +72,15 @@ pub async fn register(
         "fetched user team/game week information"
     );
 
-    let embed = embed.update("Fetching related mini league and team information.");
-    message
-        .edit(ctx, CreateReply::default().embed(embed.clone().build()))
+    let embed = embed
+        .processing()
+        .title("Registering")
+        .body("Fetching related mini league and team information.")
+        .send()
         .await?;
 
-    get_and_upsert_related_mini_leagues_and_teams(
-        &ctx,
-        &message,
-        embed.clone(),
-        team.leagues.classic,
-    )
-    .await?;
+    let embed =
+        get_and_upsert_related_mini_leagues_and_teams(&ctx, embed, team.leagues.classic).await?;
     log_timer!(
         timer,
         COMMAND,
@@ -91,32 +92,31 @@ pub async fn register(
     insert_discord_user(&ctx.data().pool, &discord_user).await?;
     log_timer!(timer, COMMAND, ctx, "added discord user");
 
-    let embed = embed
-        .success(format!("Registered Team ID {}.", team_id).as_str())
-        .build();
-
-    message
-        .edit(ctx, CreateReply::default().embed(embed))
+    embed
+        .success()
+        .title(format!("Registered Team ID {}.", team_id))
+        .send()
         .await?;
+
     log_timer!(timer, COMMAND, ctx, "completed successfully");
 
     Ok(())
 }
 
-async fn check_user_registered(
+async fn check_user_registered<'a>(
     ctx: &Context<'_>,
-    message: &ReplyHandle<'_>,
-    embed: EmbedBuilder<Processing>,
-) -> Result<(), Error> {
+    embed: Embed<'a, SentState>,
+) -> Result<Embed<'a, SentState>, Error> {
     // If the discord user is already registered, cant reregister
     match get_discord_user(&ctx.data().pool, ctx.author().id.into()).await {
         Err(err) => {
-            message
-                .edit(
-                    *ctx,
-                    CreateReply::default().embed(embed.clone().error("Error registering.").build()),
-                )
+            embed
+                .error()
+                .title("Error Registering")
+                .body("Unknown error.")
+                .send()
                 .await?;
+
             Err(format!(
                 "Error checking if discord user already exists when processing command {}: {}",
                 COMMAND, err
@@ -125,42 +125,44 @@ async fn check_user_registered(
         }
         Ok(maybe_discord_user) => match maybe_discord_user {
             Some(_) => {
-                message
-                    .edit(
-                        *ctx,
-                        CreateReply::default()
-                            .embed(embed.clone().error("User already registered.").build()),
-                    )
+                embed
+                    .error()
+                    .title("Error Registering")
+                    .body("User already registered.")
+                    .send()
                     .await?;
+
                 Err("User already registered".into())
             }
-            None => Ok(()),
+            None => Ok(embed),
         },
     }
 }
 
-async fn get_and_upsert_team_information(
+async fn get_and_upsert_team_information<'a>(
     ctx: &Context<'_>,
-    message: &ReplyHandle<'_>,
-    embed: EmbedBuilder<Processing>,
+    embed: Embed<'a, SentState>,
     team_id: TeamId,
-) -> Result<TeamResponse, Error> {
+) -> Result<(Embed<'a, SentState>, TeamResponse), Error> {
     let team_response = ctx.data().client.get(TeamRequest::new(team_id)).await;
     let team = match team_response {
         Ok(team) => team,
         Err(err) => {
-            let embed = embed
-                .clone()
-                .error(format!("Failed to get team from FPL for Team ID {}", team_id).as_str());
-            message
-                .edit(*ctx, CreateReply::default().embed(embed.clone().build()))
+            embed
+                .error()
+                .title("Error Registering")
+                .body(format!(
+                    "Failed to get team from FPL for Team ID {}",
+                    team_id
+                ))
+                .send()
                 .await?;
             return Err(err.into());
         }
     };
 
     upsert_teams(&ctx.data().pool, &[team.clone().into()]).await?;
-    Ok(team)
+    Ok((embed, team))
 }
 
 async fn process_team_game_week_data(
@@ -217,20 +219,6 @@ async fn process_team_game_week_data(
     Ok(())
 }
 
-async fn get_and_upsert_team_game_week_information(
-    ctx: &Context<'_>,
-    message: &ReplyHandle<'_>,
-    embed: EmbedBuilder<Processing>,
-    team_id: TeamId,
-) -> Result<(), Error> {
-    let embed = embed.update("Fetching team game week information.");
-    message
-        .edit(*ctx, CreateReply::default().embed(embed.clone().build()))
-        .await?;
-
-    process_team_game_week_data(&ctx.data().pool, &ctx.data().client, team_id).await
-}
-
 async fn handle_mini_league_requests(
     client: Arc<FplClient>,
     league_id: LeagueId,
@@ -249,12 +237,18 @@ async fn handle_mini_league_requests(
     Ok((current_page, mini_league_standings))
 }
 
-async fn get_mini_leagues(
+async fn get_mini_leagues<'a>(
     ctx: &Context<'_>,
-    message: &ReplyHandle<'_>,
-    embed: EmbedBuilder<Processing>,
+    embed: Embed<'a, SentState>,
     user_league_ids: HashSet<LeagueId>,
-) -> Result<(Vec<MiniLeague>, Vec<MiniLeagueStanding>), Error> {
+) -> Result<
+    (
+        Vec<MiniLeague>,
+        Vec<MiniLeagueStanding>,
+        Embed<'a, SentState>,
+    ),
+    Error,
+> {
     let mut stream = futures::stream::iter(user_league_ids)
         .map(|league_id| {
             let client = Arc::clone(&ctx.data().client);
@@ -269,17 +263,13 @@ async fn get_mini_leagues(
         let response = match result {
             Ok(response) => response,
             Err(e) => {
-                message
-                    .edit(
-                        *ctx,
-                        CreateReply::default().embed(
-                            embed
-                                .clone()
-                                .error("Error fetching related mini leagues when registering.")
-                                .build(),
-                        ),
-                    )
+                embed
+                    .error()
+                    .title("Error Registering")
+                    .body("Error fetching related mini leagues when registering")
+                    .send()
                     .await?;
+
                 return Err(e);
             }
         };
@@ -295,15 +285,14 @@ async fn get_mini_leagues(
         )
     }
 
-    Ok((leagues_info, leagues_standing_info))
+    Ok((leagues_info, leagues_standing_info, embed))
 }
 
-async fn get_all_related_teams(
+async fn get_all_related_teams<'a>(
     ctx: &Context<'_>,
-    message: &ReplyHandle<'_>,
-    embed: EmbedBuilder<Processing>,
+    embed: Embed<'a, SentState>,
     all_team_ids: Vec<TeamId>,
-) -> Result<Vec<Team>, Error> {
+) -> Result<(Vec<Team>, Embed<'a, SentState>), Error> {
     let mut related_teams = Vec::new();
 
     let mut stream = futures::stream::iter(all_team_ids)
@@ -317,17 +306,13 @@ async fn get_all_related_teams(
         let response = match result {
             Ok(response) => response,
             Err(e) => {
-                message
-                    .edit(
-                        *ctx,
-                        CreateReply::default().embed(
-                            embed
-                                .clone()
-                                .error("Error fetching related teams when registering.")
-                                .build(),
-                        ),
-                    )
+                embed
+                    .error()
+                    .title("Error Registering")
+                    .body("Error fetching related teams when registering.")
+                    .send()
                     .await?;
+
                 return Err(e.into());
             }
         };
@@ -335,15 +320,14 @@ async fn get_all_related_teams(
         related_teams.push(response.into());
     }
 
-    Ok(related_teams)
+    Ok((related_teams, embed))
 }
 
-async fn get_and_upsert_related_mini_leagues_and_teams(
+async fn get_and_upsert_related_mini_leagues_and_teams<'a>(
     ctx: &Context<'_>,
-    message: &ReplyHandle<'_>,
-    embed: EmbedBuilder<Processing>,
+    embed: Embed<'a, SentState>,
     mini_leagues: Vec<ClassicLeague>,
-) -> Result<(), Error> {
+) -> Result<Embed<'a, SentState>, Error> {
     // GET ALL THE LEAGUES THEYRE IN
     let user_league_ids: HashSet<LeagueId> = mini_leagues
         .iter()
@@ -353,41 +337,53 @@ async fn get_and_upsert_related_mini_leagues_and_teams(
         .map(|league| LeagueId::new(league.id))
         .collect();
 
-    let (leagues_info, leagues_standing_info) =
-        get_mini_leagues(ctx, message, embed.clone(), user_league_ids).await?;
+    match get_mini_leagues(ctx, embed, user_league_ids).await {
+        Ok((leagues_info, leagues_standing_info, embed)) => {
+            upsert_mini_leagues(&ctx.data().pool, &leagues_info).await?;
+            upsert_mini_league_standings(&ctx.data().pool, &leagues_standing_info).await?;
 
-    upsert_mini_leagues(&ctx.data().pool, &leagues_info).await?;
-    upsert_mini_league_standings(&ctx.data().pool, &leagues_standing_info).await?;
+            let all_team_ids = leagues_standing_info
+                .iter()
+                .map(|standing| standing.team_id)
+                .collect();
 
-    let all_team_ids = leagues_standing_info
-        .iter()
-        .map(|standing| standing.team_id)
-        .collect();
+            match get_all_related_teams(ctx, embed, all_team_ids).await {
+                Ok((all_teams, embed)) => {
+                    upsert_teams(&ctx.data().pool, &all_teams).await?;
 
-    let all_teams = get_all_related_teams(ctx, message, embed.clone(), all_team_ids).await?;
-    upsert_teams(&ctx.data().pool, &all_teams).await?;
+                    // Process each related team's game week data
+                    let all_team_ids: Vec<TeamId> = all_teams.into_iter().map(|t| t.id).collect();
+                    let pool = ctx.data().pool.clone();
+                    let client = ctx.data().client.clone();
 
-    // Process each related team's game week data
-    let all_team_ids: Vec<TeamId> = all_teams.into_iter().map(|t| t.id).collect();
-    let pool = ctx.data().pool.clone();
-    let client = ctx.data().client.clone();
+                    let mut stream = futures::stream::iter(all_team_ids)
+                        .map(|team_id| {
+                            let pool = pool.clone();
+                            let client = client.clone();
+                            async move {
+                                if let Err(e) =
+                                    process_team_game_week_data(&pool, &client, team_id).await
+                                {
+                                    tracing::error!(
+                                        "Error processing game weeks for team {}: {}",
+                                        team_id,
+                                        e
+                                    );
+                                }
+                                Ok::<(), Error>(())
+                            }
+                        })
+                        .buffer_unordered(2);
 
-    let mut stream = futures::stream::iter(all_team_ids)
-        .map(|team_id| {
-            let pool = pool.clone();
-            let client = client.clone();
-            async move {
-                if let Err(e) = process_team_game_week_data(&pool, &client, team_id).await {
-                    tracing::error!("Error processing game weeks for team {}: {}", team_id, e);
+                    while let Some(result) = stream.next().await {
+                        result?;
+                    }
+
+                    Ok(embed)
                 }
-                Ok::<(), Error>(())
+                Err(e) => Err(e),
             }
-        })
-        .buffer_unordered(2); // Process 2 teams concurrently
-
-    while let Some(result) = stream.next().await {
-        result?;
+        }
+        Err(e) => Err(e),
     }
-
-    Ok(())
 }

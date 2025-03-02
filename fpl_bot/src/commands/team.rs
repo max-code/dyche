@@ -9,8 +9,10 @@ use serenity::all::User;
 use tracing::debug;
 
 use crate::{
-    commands::get_image_file_path, log_call, log_timer, start_timer,
-    utils::embed_builder_v2::Embed, Context, Error,
+    commands::get_image_file_path,
+    log_call, log_timer, start_timer,
+    utils::embed::{Embed, EmbedPage},
+    Context, Error,
 };
 
 const COMMAND: &str = "/team";
@@ -24,11 +26,11 @@ pub async fn team(
     log_call!(COMMAND, ctx, "user", user, "game_week", game_week);
     let timer: Instant = start_timer!();
 
-    let mut embed = Embed::new(ctx)?
+    let embed = Embed::from_ctx(ctx)?
+        .processing()
         .title("Processing team request")
-        .processing();
-
-    embed.send().await?;
+        .send()
+        .await?;
 
     let game_week_id: i16 = match game_week {
         Some(gw) => i16::from(gw),
@@ -48,9 +50,9 @@ pub async fn team(
     log_timer!(timer, COMMAND, ctx, "rendered image");
 
     embed
-        .image(file_name)
-        .title(format!("Team for GW{}", game_week_id))
         .success()
+        .title(format!("Team for GW{}", game_week_id))
+        .add_page(EmbedPage::new().with_image(file_name))
         .send()
         .await?;
 
@@ -179,7 +181,7 @@ async fn get_player_data(
             p.web_name as name,
             p.code as code,
             CASE
-                WHEN bwc.bonus = 0 THEN gwp.total_points + bwc.calculated_bonus
+                WHEN bwc.bonus = 0 AND bwc.bps > 0 THEN gwp.total_points + bwc.calculated_bonus
                 ELSE gwp.total_points
             END as "points!",
             tgwp.is_captain as captain,

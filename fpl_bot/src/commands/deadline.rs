@@ -4,8 +4,9 @@ use sqlx::types::chrono::{DateTime, Utc};
 use std::time::Instant;
 use tracing::{debug, info};
 
+use crate::utils::embed::Embed;
 use crate::{log_call, log_timer, start_timer};
-use crate::{utils::paginator::paginate, Context, Error};
+use crate::{Context, Error};
 use fpl_common::types::GameWeekId;
 use fpl_db::queries::game_week::get_current_game_week;
 
@@ -36,12 +37,12 @@ pub async fn deadline(
     })?;
     log_timer!(timer, COMMAND, ctx, "fetched deadlines");
 
-    let mut pages = game_week_deadlines
+    let mut deadline_rows = game_week_deadlines
         .into_iter()
         .map(|(name, deadline_time)| {
             let day = deadline_time.day();
             format!(
-                "**{}** Deadline: {}",
+                "**{}**: {}",
                 name,
                 deadline_time.format(&format!("%B {}, %l:%M %p, %Y", Ordinal(day)))
             )
@@ -53,7 +54,7 @@ pub async fn deadline(
     match game_week_id {
         Some(gw) => {
             let index = (gw.0 - 1) as usize;
-            pages.rotate_left(index);
+            deadline_rows.rotate_left(index);
         }
         None => {
             let current_gw = get_current_game_week(&ctx.data().pool).await?;
@@ -62,16 +63,17 @@ pub async fn deadline(
                 None => current_gw.id,
             };
             let index = (next_gw_id.0 - 1) as usize;
-            pages.rotate_left(index);
+            deadline_rows.rotate_left(index);
         }
     }
     log_timer!(timer, COMMAND, ctx, "formatted deadlines");
 
-    paginate(
-        ctx,
-        COMMAND,
-        &pages.iter().map(|p| p.as_str()).collect::<Vec<_>>(),
-    )
-    .await?;
+    Embed::from_ctx(ctx)?
+        .success()
+        .title("Deadline".to_string())
+        .add_pages_from_strings(deadline_rows, Some(1))
+        .send()
+        .await?;
+
     Ok(())
 }

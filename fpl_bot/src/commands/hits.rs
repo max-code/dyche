@@ -2,13 +2,12 @@ use std::collections::BTreeMap;
 use std::time::Instant;
 
 use crate::autocompletes::{autocomplete_league_or_user, autocomplete_league_or_user_value};
-use crate::utils::common::{check_discord_user_registered, get_not_registered_message};
-use crate::utils::paginator::maybe_paginate_rows;
+use crate::utils::common::{check_discord_user_registered, get_not_registered_title_and_message};
+use crate::utils::embed::Embed;
 use crate::{log_call, log_timer, start_timer};
 use crate::{Context, Error};
 
 use fpl_common::types::LeagueId;
-use poise::CreateReply;
 use tracing::{debug, info};
 
 const COMMAND: &str = "/hits";
@@ -43,7 +42,12 @@ pub async fn hits(
                 user_hits
             }
             false => {
-                ctx.send(CreateReply::default().embed(get_not_registered_message(COMMAND, value)))
+                let (title, message) = get_not_registered_title_and_message(value);
+                Embed::from_ctx(ctx)?
+                    .error()
+                    .title(title)
+                    .body(message)
+                    .send()
                     .await?;
                 return Ok(());
             }
@@ -58,7 +62,14 @@ pub async fn hits(
         }
     };
 
-    maybe_paginate_rows(ctx, rows, COMMAND).await
+    Embed::from_ctx(ctx)?
+        .success()
+        .title("Hits".to_string())
+        .add_pages_from_strings(rows, None)
+        .send()
+        .await?;
+
+    Ok(())
 }
 
 pub async fn get_user_hits(

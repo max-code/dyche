@@ -242,10 +242,14 @@ impl TeamRenderer {
         let header_height = self.header_height + self.header_vertical_padding;
         let players_height =
             (4 * self.player_card_height) + (5 * self.player_card_vertical_padding);
-        let bench_height = self.player_card_height + self.player_card_vertical_padding;
+        let bench_height = self.player_card_height + (2 * self.player_card_vertical_padding);
         let transfer_rows = ((data.transfers.len() + 1) / 2) as u32;
-        let transfers_height = ((transfer_rows + 1) * self.transfer_row_height)
-            + (transfer_rows * self.transfer_row_vertical_padding as u32);
+        let transfers_height = if !data.transfers.is_empty() {
+            ((transfer_rows + 1) * self.transfer_row_height)
+                + (transfer_rows * self.transfer_row_vertical_padding as u32)
+        } else {
+            0
+        };
         let total_height = self.header_height + players_height + bench_height + transfers_height;
 
         // TODO: Reset these to self.width and self.height
@@ -290,8 +294,9 @@ impl TeamRenderer {
 
         document = self.add_header(&data, document)?;
         document = self.add_player_cards(&data, document)?;
-        document = self.add_transfers(&data, document)?;
-
+        if !data.transfers.is_empty() {
+            document = self.add_transfers(&data, document)?;
+        }
         let svg_string = document.to_string();
         let mut opt: Options<'_> = Options::default();
         opt.fontdb_mut().load_system_fonts();
@@ -427,13 +432,18 @@ impl TeamRenderer {
         document = document.add(game_week_bg).add(game_week_text);
 
         // GW RANK
+        let gw_rank_text = if data.gw_rank == 0 {
+            "-".to_string()
+        } else {
+            data.gw_rank.separate_with_commas()
+        };
         let rank_box_width = (((self.width as f64 - self.score_box_side_length) / 2.0)
             - (3.0 * self.side_box_padding))
             / 2.0;
         let game_week_rank_x =
             ((self.width as f64 + self.score_box_side_length) / 2.0) + self.side_box_padding;
         let (game_week_rank_bg, game_week_rank_text) = CenteredTextBox::new()
-            .text(data.gw_rank.separate_with_commas())
+            .text(gw_rank_text)
             .dimensions(rank_box_width, self.side_box_height)
             .position(game_week_rank_x, main_box_y)
             .background_color(WHITE_COLOUR)

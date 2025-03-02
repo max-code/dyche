@@ -1,5 +1,5 @@
 use crate::autocompletes::autocomplete_mini_league;
-use crate::utils::paginator::maybe_paginate_rows;
+use crate::utils::embed::Embed;
 use crate::{log_call, log_timer, start_timer, Context, Error};
 use std::time::Instant;
 use tracing::{debug, info};
@@ -33,6 +33,7 @@ pub async fn captains(
         WHERE tgwp.game_week_id = $1
         AND ml.id = $2
         AND tgwp.is_captain = true
+        ORDER BY p.id ASC
         "#,
         i16::from(current_game_week.id),
         i32::from(league_id)
@@ -52,5 +53,12 @@ pub async fn captains(
         .map(|(player_name, _, web_name)| format!("**{}** captained **{}**", player_name, web_name))
         .collect::<Vec<String>>();
 
-    maybe_paginate_rows(ctx, captains_rows, COMMAND).await
+    Embed::from_ctx(ctx)?
+        .success()
+        .title("Captains".to_string())
+        .add_pages_from_strings(captains_rows, None)
+        .send()
+        .await?;
+
+    Ok(())
 }

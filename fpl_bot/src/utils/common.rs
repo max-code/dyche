@@ -1,7 +1,4 @@
-use serenity::all::CreateEmbed;
 use sqlx::PgPool;
-
-use super::embed_builder::EmbedBuilder;
 
 pub async fn check_discord_user_registered(
     pool: &PgPool,
@@ -17,6 +14,7 @@ pub async fn check_discord_user_registered(
     Ok(registered.count.unwrap_or(0) > 0)
 }
 
-pub fn get_not_registered_message(command: &str, discord_id: i64) -> CreateEmbed {
-    EmbedBuilder::new(command, "").error(format!("User <@{}> not registered with FplBot!\nThey should use **/register [Team ID]** for this command to work\n(To find Team ID: https://fpl.team/find-id/)", discord_id).as_str()).build()
+pub fn get_not_registered_title_and_message(discord_id: i64) -> (String, String) {
+    ("User not registered!".to_string(),
+    format!("User <@{}> not registered with FplBot!\nThey should use **/register [Team ID]** for this command to work\n(To find Team ID: https://fpl.team/find-id/)", discord_id))
 }

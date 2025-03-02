@@ -1,7 +1,7 @@
 use crate::autocompletes::{
     autocomplete_mini_league, autocomplete_player_or_club, autocomplete_player_or_club_value,
 };
-use crate::utils::paginator::maybe_paginate_rows;
+use crate::utils::embed::Embed;
 use crate::{Context, Error};
 use fpl_db::models::GameWeek;
 use std::collections::{BTreeMap, HashMap};
@@ -74,7 +74,14 @@ pub async fn whohas(
         }
     };
 
-    maybe_paginate_rows(ctx, rows, COMMAND).await
+    Embed::from_ctx(ctx)?
+        .success()
+        .title("Deadline".to_string())
+        .add_pages_from_strings(rows, None)
+        .send()
+        .await?;
+
+    Ok(())
 }
 
 async fn get_whohas_player(
