@@ -6,6 +6,7 @@ pub mod loglevel;
 pub mod register;
 pub mod table;
 pub mod team;
+pub mod unique;
 pub mod whohas;
 
 pub use captains::*;
@@ -16,6 +17,7 @@ pub use loglevel::*;
 pub use register::*;
 pub use table::*;
 pub use team::*;
+pub use unique::*;
 pub use whohas::*;
 
 use crate::Context;
