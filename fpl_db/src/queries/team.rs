@@ -72,3 +72,27 @@ pub async fn get_all_team_ids(pool: &PgPool) -> Result<Vec<TeamId>, sqlx::Error>
 
     Ok(ids)
 }
+
+pub async fn get_team_name_from_discord_id(
+    pool: &PgPool,
+    discord_id: i64,
+) -> Result<String, sqlx::Error> {
+    let record = sqlx::query!(
+        "SELECT t.name, t.player_first_name, t.player_last_name 
+         FROM discord_users du 
+         JOIN teams t ON du.team_id = t.id 
+         WHERE du.discord_id = $1",
+        discord_id
+    )
+    .fetch_optional(pool)
+    .await?;
+
+    Ok(record
+        .map(|row| {
+            format!(
+                "{} ({} {})",
+                row.name, row.player_first_name, row.player_last_name
+            )
+        })
+        .unwrap_or_else(|| "N/A".to_string()))
+}

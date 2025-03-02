@@ -1,6 +1,7 @@
 use crate::autocompletes::autocomplete_mini_league;
 use crate::utils::embed::Embed;
 use crate::{log_call, log_timer, start_timer, Context, Error};
+use fpl_db::queries::mini_league::get_league_name;
 use std::time::Instant;
 use tracing::{debug, info};
 
@@ -48,6 +49,9 @@ pub async fn captains(
 
     log_timer!(timer, COMMAND, ctx, "fetched captains");
 
+    let league_name = get_league_name(&ctx.data().pool, league_id).await?;
+    log_timer!(timer, COMMAND, ctx, "fetched league_name");
+
     let captains_rows = captains
         .into_iter()
         .map(|(player_name, _, web_name)| format!("**{}** captained **{}**", player_name, web_name))
@@ -55,7 +59,7 @@ pub async fn captains(
 
     Embed::from_ctx(ctx)?
         .success()
-        .title("Captains".to_string())
+        .title(format!("Captains for {league_name}"))
         .add_pages_from_strings(captains_rows, None)
         .send()
         .await?;

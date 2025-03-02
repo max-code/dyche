@@ -1,4 +1,4 @@
-use fpl_common::types::LeagueId;
+use fpl_common::types::{league_id, LeagueId};
 use sqlx::PgPool;
 use tracing::debug;
 
@@ -98,4 +98,17 @@ pub async fn get_all_mini_league_ids(pool: &PgPool) -> Result<Vec<LeagueId>, sql
         .collect();
 
     Ok(ids)
+}
+
+pub async fn get_league_name(pool: &PgPool, league_id: LeagueId) -> Result<String, sqlx::Error> {
+    let record = sqlx::query!(
+        "SELECT name FROM mini_leagues WHERE id = $1",
+        i32::from(league_id)
+    )
+    .fetch_optional(pool)
+    .await?;
+
+    Ok(record
+        .map(|row| row.name)
+        .unwrap_or_else(|| "N/A".to_string()))
 }

@@ -9,6 +9,8 @@ use crate::{Context, Error};
 use crate::{start_timer, log_timer, log_call};
 
 use fpl_common::types::{Chip, LeagueId, TeamId};
+use fpl_db::queries::mini_league::get_league_name;
+use fpl_db::queries::team::get_team_name_from_discord_id;
 use tracing::{debug, info};
 
 const COMMAND: &str = "/chips";
@@ -56,9 +58,26 @@ pub async fn chips(
         }
     };
 
+    let league_or_user_string = match league_or_user.as_str() {
+        "User" => {
+            let team_name = get_team_name_from_discord_id(&ctx.data().pool, value).await?;
+            log_timer!(timer, COMMAND, ctx, "fetched team_name");
+            team_name
+
+        },
+        "League" => {
+            let league_name = get_league_name(&ctx.data().pool, LeagueId::new(value as i32)).await?;
+            log_timer!(timer, COMMAND, ctx, "fetched league_name");
+            league_name
+        },
+        _ => {
+            return Err("Unknown league_or_user_type".into());
+        }
+    };
+
     Embed::from_ctx(ctx)?
         .success()
-        .title("Chips".to_string())
+        .title(format!("Chips for {league_or_user_string}"))
         .add_pages_from_strings(rows, None)
         .send()
         .await?;

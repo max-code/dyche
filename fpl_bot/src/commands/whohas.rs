@@ -4,6 +4,7 @@ use crate::autocompletes::{
 use crate::utils::embed::Embed;
 use crate::{Context, Error};
 use fpl_db::models::GameWeek;
+use fpl_db::queries::mini_league::get_league_name;
 use std::collections::{BTreeMap, HashMap};
 use std::time::Instant;
 use tracing::{debug, info};
@@ -74,9 +75,12 @@ pub async fn whohas(
         }
     };
 
+    let league_name = get_league_name(&ctx.data().pool, league_id).await?;
+    log_timer!(timer, COMMAND, ctx, "fetched league_name");
+
     Embed::from_ctx(ctx)?
         .success()
-        .title("Deadline".to_string())
+        .title(format!("Who has in {league_name}"))
         .add_pages_from_strings(rows, None)
         .send()
         .await?;

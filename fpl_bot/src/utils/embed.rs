@@ -6,7 +6,7 @@ use std::{
     marker::{PhantomData, Send, Sync},
     path::{Path, PathBuf},
 };
-use tracing::warn;
+use tracing::{debug, warn};
 
 use crate::{Context, Error};
 pub trait State {}
@@ -213,8 +213,8 @@ impl<'a> Embed<'a, SentState> {
 
     fn transition<T: State>(self) -> Embed<'a, T> {
         Embed {
-            title: self.title,
-            pages: self.pages,
+            title: None,
+            pages: vec![],
             state: PhantomData,
             http: self.http,
             interaction: self.interaction,
@@ -234,7 +234,7 @@ impl<'a, S: ReadyForSend + EmbedState + Sync + Send> Embed<'a, S> {
 
     fn transition(self) -> Embed<'a, SentState> {
         Embed {
-            title: self.title,
+            title: None,
             pages: vec![],
             state: PhantomData,
             http: self.http,
@@ -273,7 +273,7 @@ impl<'a, S: ReadyForSend + EmbedState + Sync + Send> Embed<'a, S> {
 
     pub async fn send(mut self) -> Result<Embed<'a, SentState>, Error> {
         if self.pages.is_empty() {
-            warn!(
+            debug!(
                 "Trying to send an embed with no pages ({}). Adding empty page.",
                 self.ctx_id
             );

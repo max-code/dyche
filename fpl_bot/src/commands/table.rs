@@ -3,6 +3,7 @@ use crate::commands::get_image_file_path;
 use crate::images::{TableData, TableRenderer};
 use crate::utils::embed::{Embed, EmbedPage};
 use crate::{log_call, log_timer, start_timer, Context, Error};
+use fpl_db::queries::mini_league::get_league_name;
 use sqlx::FromRow;
 use std::cmp::Reverse;
 use std::time::Instant;
@@ -60,6 +61,9 @@ pub async fn table(
     });
     log_timer!(timer, COMMAND, ctx, "fetched live points");
 
+    let league_name = get_league_name(&ctx.data().pool, league_id).await?;
+    log_timer!(timer, COMMAND, ctx, "fetched league_name");
+
     let title = format!("{} League Standings", overall_or_week);
     let mut data: TableData = TableData::new(title.to_string());
     for lp in live_points {
@@ -97,6 +101,9 @@ pub async fn table(
 
     embed
         .success()
+        .title(format!(
+            "{overall_or_week} League standings for {league_name}"
+        ))
         .add_page(EmbedPage::new().with_image(file_name))
         .send()
         .await?;

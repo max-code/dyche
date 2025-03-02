@@ -8,6 +8,8 @@ use crate::{log_call, log_timer, start_timer};
 use crate::{Context, Error};
 
 use fpl_common::types::LeagueId;
+use fpl_db::queries::mini_league::get_league_name;
+use fpl_db::queries::team::get_team_name_from_discord_id;
 use tracing::{debug, info};
 
 const COMMAND: &str = "/hits";
@@ -62,9 +64,26 @@ pub async fn hits(
         }
     };
 
+    let league_or_user_string = match league_or_user.as_str() {
+        "User" => {
+            let team_name = get_team_name_from_discord_id(&ctx.data().pool, value).await?;
+            log_timer!(timer, COMMAND, ctx, "fetched team_name");
+            team_name
+        }
+        "League" => {
+            let league_name =
+                get_league_name(&ctx.data().pool, LeagueId::new(value as i32)).await?;
+            log_timer!(timer, COMMAND, ctx, "fetched league_name");
+            league_name
+        }
+        _ => {
+            return Err("Unknown league_or_user_type".into());
+        }
+    };
+
     Embed::from_ctx(ctx)?
         .success()
-        .title("Hits".to_string())
+        .title(format!("Hits for {league_or_user_string}"))
         .add_pages_from_strings(rows, None)
         .send()
         .await?;
@@ -179,7 +198,7 @@ pub async fn get_league_hits(
                 let users_formatted = users
                     .into_iter()
                     .map(|(user_name, team_name, hits_cost)| {
-                        format!("{user_name} ({team_name}) [{}]", hits_cost / 4)
+                        format!("{user_name} ({team_name}) **{}**", hits_cost / 4)
                     })
                     .collect::<Vec<_>>()
                     .join(", ");

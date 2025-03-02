@@ -4,7 +4,7 @@ use fpl_bot::images::{
     GameStatus, PlayerGameInfo, PlayerInfo, TeamData, TeamDataBuilder, TeamRenderer, TransferInfo,
 };
 use fpl_common::types::{Chip, GameWeekId, PlayerPosition};
-use fpl_db::queries::game_week::get_current_game_week;
+use fpl_db::queries::{game_week::get_current_game_week, team::get_team_name_from_discord_id};
 use serenity::all::User;
 use tracing::debug;
 
@@ -45,13 +45,16 @@ pub async fn team(
     let data: TeamData = get_team_data(ctx, user_id, game_week_id, &timer).await?;
     let file_name = get_image_file_path(COMMAND, &ctx);
 
+    let team_name = get_team_name_from_discord_id(&ctx.data().pool, user_id).await?;
+    log_timer!(timer, COMMAND, ctx, "fetched team_name");
+
     let renderer = TeamRenderer::default();
     renderer.render(data, &file_name).await?;
     log_timer!(timer, COMMAND, ctx, "rendered image");
 
     embed
         .success()
-        .title(format!("Team for GW{}", game_week_id))
+        .title(format!("Team for {team_name} in Gameweek {game_week_id}"))
         .add_page(EmbedPage::new().with_image(file_name))
         .send()
         .await?;
