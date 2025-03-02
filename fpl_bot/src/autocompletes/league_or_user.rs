@@ -4,6 +4,8 @@ use tracing::error;
 use crate::autocompletes::get_mini_league_name_autocompletes;
 use crate::Context;
 
+use super::helpers::get_registered_users_autocompletes;
+
 pub async fn autocomplete_league_or_user<'a>(
     _ctx: Context<'_>,
     _partial: &'a str,
@@ -49,20 +51,8 @@ pub async fn autocomplete_league_or_user_value<'a>(
                 .members(&ctx.serenity_context().http, None, None)
                 .await
             {
-                Ok(members) => members
-                    .into_iter()
-                    .filter_map(|member| {
-                        let name = format!("{} ({})", member.display_name(), member.user.name);
-                        if name.to_lowercase().contains(&partial.to_lowercase()) {
-                            Some(serenity::AutocompleteChoice::new(
-                                name,
-                                member.user.id.to_string(),
-                            ))
-                        } else {
-                            None
-                        }
-                    })
-                    .take(25)
+                Ok(members) => get_registered_users_autocompletes(ctx, &members, partial)
+                    .await
                     .collect::<Vec<_>>(),
                 Err(err) => {
                     error!("{:#?}", err);

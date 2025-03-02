@@ -1,4 +1,7 @@
+use std::collections::HashSet;
+
 use crate::Context;
+use ::serenity::all::Member;
 use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
 use poise::serenity_prelude as serenity;
@@ -85,4 +88,39 @@ pub(crate) async fn get_player_name_autocompletes<'a>(
             true => serenity::AutocompleteChoice::new(name, id.to_string()),
             false => serenity::AutocompleteChoice::new(name, id),
         })
+}
+
+// TODO: Can easily have a cache here for the registered_discord_ids.
+// Can even probably just have one for server id: [registered members]
+pub(crate) async fn get_registered_users_autocompletes<'a>(
+    ctx: Context<'_>,
+    members: &[Member],
+    partial: &'a str,
+) -> impl Iterator<Item = serenity::AutocompleteChoice> + 'a {
+    let registered_discord_ids: HashSet<i64> = sqlx::query!("SELECT discord_id FROM discord_users")
+        .fetch_all(&*ctx.data().pool)
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .map(|row| row.discord_id)
+        .collect();
+
+    let filtered_members = members
+        .iter()
+        .filter(|member| registered_discord_ids.contains(&(member.user.id.get() as i64)))
+        .filter_map(|member| {
+            let name = format!("{} ({})", member.display_name(), member.user.name);
+            if name.to_lowercase().contains(&partial.to_lowercase()) {
+                Some(serenity::AutocompleteChoice::new(
+                    name,
+                    member.user.id.to_string(),
+                ))
+            } else {
+                None
+            }
+        })
+        .take(25)
+        .collect::<Vec<_>>();
+
+    filtered_members.into_iter()
 }
