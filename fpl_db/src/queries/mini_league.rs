@@ -1,4 +1,4 @@
-use fpl_common::types::{league_id, LeagueId};
+use fpl_common::types::LeagueId;
 use sqlx::PgPool;
 use tracing::debug;
 

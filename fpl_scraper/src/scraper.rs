@@ -2,9 +2,10 @@ use std::{collections::HashMap, time::Duration};
 
 use crate::error::ScraperError;
 use async_trait::async_trait;
+use sqlx::types::chrono;
 use strum::{EnumIter, IntoEnumIterator};
 use tokio::time;
-use tracing::{error, info, instrument, trace, warn};
+use tracing::{error, info, instrument, warn};
 
 #[derive(Debug, Eq, PartialEq, Hash, Clone, Copy, PartialOrd, Ord, EnumIter)]
 pub enum ScraperOrder {
@@ -76,14 +77,21 @@ impl ScraperManager {
 
     #[instrument(skip(self))]
     pub async fn run(&self) {
-        info!("Starting scraper manager");
+        info!(
+            "ScraperManager started with {} registered scrapers",
+            self.scrapers.len()
+        );
+
         let mut interval = time::interval(Duration::from_secs(10));
         loop {
             interval.tick().await;
-            info!("ℹ️ Running all scrapers");
-            trace!("Scrapers Tick");
+            info!("ℹ️ Starting new scraper cycle at {}", chrono::Utc::now());
             match self.process_all_scrapers().await {
-                Ok(_) => info!("✅ All scrapers completed successfully"),
+                Ok(_) => info!(
+                    "✅ Scraper cycle completed successfully at {}",
+                    chrono::Utc::now()
+                ),
+
                 Err(errors) => {
                     error!(
                         "❌ Failed to process scrapers. {} errors occurred",
