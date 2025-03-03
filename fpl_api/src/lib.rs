@@ -15,7 +15,7 @@ use thiserror::Error;
 use tracing::debug;
 
 pub const REQ_TIMEOUT_SECONDS: u64 = 30;
-const REQUESTS_PER_SECOND: u32 = 500;
+const REQUESTS_PER_SECOND: u32 = 250;
 
 #[derive(Error, Debug)]
 pub enum FplClientError {

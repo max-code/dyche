@@ -46,9 +46,6 @@ impl MiniLeaguesScraper {
         let mut current_page = client.get(MiniLeagueRequest::new(league_id, page)).await?;
         mini_league_standings.extend(current_page.standings.results.clone());
         while current_page.standings.has_next {
-            // Sometimes get 429's, so add small delay.
-            // TODO: Remove this, find a better way/smart retry
-            tokio::time::sleep(Duration::from_millis(100)).await;
             page += 1;
             current_page = client.get(MiniLeagueRequest::new(league_id, page)).await?;
             mini_league_standings.extend(current_page.standings.results.clone());

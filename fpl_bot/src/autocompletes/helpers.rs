@@ -4,7 +4,44 @@ use crate::Context;
 use ::serenity::all::Member;
 use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
+use once_cell::sync::Lazy;
 use poise::serenity_prelude as serenity;
+
+static MATCHER: Lazy<SkimMatcherV2> = Lazy::new(SkimMatcherV2::default);
+
+fn get_fuzzy_matches<'a, T>(
+    partial: &str,
+    rows: Vec<(String, T)>,
+    id_as_string: bool,
+) -> impl Iterator<Item = serenity::AutocompleteChoice> + 'a
+where
+    T: ToString + Copy + Into<i64> + 'a,
+{
+    let partial_lower = partial.to_lowercase();
+
+    let mut matches: Vec<_> = rows
+        .into_iter()
+        .filter_map(|(name, id)| {
+            let name_lower = name.to_lowercase();
+            MATCHER
+                .fuzzy_match(&name_lower, &partial_lower)
+                .map(|score| (score, name, id))
+        })
+        .collect();
+
+    if matches.len() > 1 {
+        matches.sort_unstable_by(|a, b| b.0.cmp(&a.0));
+    }
+
+    matches.truncate(8);
+
+    matches
+        .into_iter()
+        .map(move |(_, name, id)| match id_as_string {
+            true => serenity::AutocompleteChoice::new(name, id.to_string()),
+            false => serenity::AutocompleteChoice::new(name, id.into()),
+        })
+}
 
 pub(crate) async fn get_mini_league_name_autocompletes<'a>(
     ctx: Context<'_>,
@@ -20,13 +57,7 @@ pub(crate) async fn get_mini_league_name_autocompletes<'a>(
     .await)
         .unwrap_or_default();
 
-    mini_league_names
-        .into_iter()
-        .filter(|(name, _)| name.to_lowercase().starts_with(&partial.to_lowercase()))
-        .map(move |(name, id)| match as_string {
-            true => serenity::AutocompleteChoice::new(name, id.to_string()),
-            false => serenity::AutocompleteChoice::new(name, id),
-        })
+    get_fuzzy_matches(partial, mini_league_names, as_string)
 }
 
 pub(crate) async fn get_club_name_autocompletes<'a>(
@@ -40,13 +71,7 @@ pub(crate) async fn get_club_name_autocompletes<'a>(
         .await)
         .unwrap_or_default();
 
-    club_names
-        .into_iter()
-        .filter(|(name, _)| name.to_lowercase().starts_with(&partial.to_lowercase()))
-        .map(move |(name, id)| match as_string {
-            true => serenity::AutocompleteChoice::new(name, id.to_string()),
-            false => serenity::AutocompleteChoice::new(name, id),
-        })
+    get_fuzzy_matches(partial, club_names, as_string)
 }
 
 pub(crate) async fn get_player_name_autocompletes<'a>(
@@ -67,27 +92,7 @@ pub(crate) async fn get_player_name_autocompletes<'a>(
     .await)
         .unwrap_or_default();
 
-    let matcher = SkimMatcherV2::default();
-    let partial_lower = partial.to_lowercase();
-
-    let mut matches: Vec<_> = player_names
-        .into_iter()
-        .filter_map(|(name, id)| {
-            let name_lower = name.to_lowercase();
-            matcher
-                .fuzzy_match(&name_lower, &partial_lower)
-                .map(|score| (score, name, id))
-        })
-        .collect();
-
-    matches.sort_by(|a, b| b.0.cmp(&a.0));
-
-    matches
-        .into_iter()
-        .map(move |(_, name, id)| match as_string {
-            true => serenity::AutocompleteChoice::new(name, id.to_string()),
-            false => serenity::AutocompleteChoice::new(name, id),
-        })
+    get_fuzzy_matches(partial, player_names, as_string)
 }
 
 // TODO: Can easily have a cache here for the registered_discord_ids.

@@ -228,7 +228,6 @@ async fn handle_mini_league_requests(
     let mut current_page = client.get(MiniLeagueRequest::new(league_id, page)).await?;
     mini_league_standings.extend(current_page.standings.results.clone());
     while current_page.standings.has_next {
-        tokio::time::sleep(Duration::from_millis(100)).await;
         page += 1;
         current_page = client.get(MiniLeagueRequest::new(league_id, page)).await?;
         mini_league_standings.extend(current_page.standings.results.clone());
