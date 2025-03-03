@@ -2,7 +2,7 @@ use std::time::{Duration, SystemTime};
 
 use crate::error::ScraperError;
 use crate::scraper::{Scraper, ScraperOrder, ShouldScrape};
-use crate::NoScrapeReason;
+use crate::{with_retry, NoScrapeReason, DEFAULT_MAX_RETRIES};
 use async_trait::async_trait;
 use fpl_db::models::Team;
 use futures::StreamExt;
@@ -38,7 +38,16 @@ impl TeamsScraper {
         client: Arc<FplClient>,
         team_id: TeamId,
     ) -> Result<Team, ScraperError> {
-        let team_response = client.get(TeamRequest::new(team_id)).await?;
+        let team_response = with_retry(
+            || {
+                let client_clone = client.clone();
+                let team_id_clone = team_id;
+                async move { client_clone.get(TeamRequest::new(team_id_clone)).await }
+            },
+            DEFAULT_MAX_RETRIES,
+        )
+        .await?;
+
         Ok((&team_response).into())
     }
 }

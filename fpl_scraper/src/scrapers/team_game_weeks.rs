@@ -2,7 +2,7 @@ use std::time::{Duration, SystemTime};
 
 use crate::error::ScraperError;
 use crate::scraper::{Scraper, ScraperOrder, ShouldScrape};
-use crate::NoScrapeReason;
+use crate::{with_retry, NoScrapeReason, DEFAULT_MAX_RETRIES};
 use async_trait::async_trait;
 use fpl_api::responses::team_game_week::TeamGameWeekResponse;
 use fpl_db::queries::game_week::get_current_game_week;
@@ -43,9 +43,21 @@ impl TeamGameWeekScraper {
         team_id: TeamId,
         game_week_id: GameWeekId,
     ) -> Result<TeamGameWeekResponse, ScraperError> {
-        let team_game_week_response = client
-            .get(TeamGameWeekRequest::new(team_id, game_week_id))
-            .await?;
+        let team_game_week_response = with_retry(
+            || {
+                let client_clone = client.clone();
+                let team_id_clone = team_id;
+                let game_week_id_clone = game_week_id;
+                async move {
+                    client_clone
+                        .get(TeamGameWeekRequest::new(team_id_clone, game_week_id_clone))
+                        .await
+                }
+            },
+            DEFAULT_MAX_RETRIES,
+        )
+        .await?;
+
         Ok(team_game_week_response)
     }
 }

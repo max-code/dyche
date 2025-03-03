@@ -2,7 +2,7 @@ use std::time::{Duration, SystemTime};
 
 use crate::error::ScraperError;
 use crate::scraper::{Scraper, ScraperOrder, ShouldScrape};
-use crate::{with_retry, NoScrapeReason};
+use crate::{with_retry, NoScrapeReason, DEFAULT_MAX_RETRIES};
 use async_trait::async_trait;
 use fpl_db::models::{PlayerFixtureDb, PlayerHistoryDb, PlayerHistoryPastDb};
 use fpl_db::queries::player::{
@@ -55,7 +55,7 @@ impl PlayersScraper {
                 let player_id_clone = player_id;
                 async move { client_clone.get(PlayerRequest::new(player_id_clone)).await }
             },
-            3,
+            DEFAULT_MAX_RETRIES,
         )
         .await?;
 

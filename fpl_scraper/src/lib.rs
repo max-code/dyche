@@ -8,6 +8,8 @@ pub use scrapers::*;
 
 use std::{future::Future, time::Duration};
 
+const DEFAULT_MAX_RETRIES: usize = 5;
+
 async fn with_retry<F, Fut, T, E>(f: F, max_retries: usize) -> Result<T, E>
 where
     F: Fn() -> Fut + Clone,

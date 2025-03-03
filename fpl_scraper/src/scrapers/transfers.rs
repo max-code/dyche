@@ -2,7 +2,7 @@ use std::time::{Duration, SystemTime};
 
 use crate::error::ScraperError;
 use crate::scraper::{Scraper, ScraperOrder, ShouldScrape};
-use crate::NoScrapeReason;
+use crate::{with_retry, NoScrapeReason, DEFAULT_MAX_RETRIES};
 use async_trait::async_trait;
 use fpl_db::models::Transfer;
 use fpl_db::queries::transfers::upsert_transfers;
@@ -39,7 +39,15 @@ impl TransfersScraper {
         client: Arc<FplClient>,
         team_id: TeamId,
     ) -> Result<Vec<Transfer>, ScraperError> {
-        let transfers_response = client.get(TransfersRequest::new(team_id)).await?;
+        let transfers_response = with_retry(
+            || {
+                let client_clone = client.clone();
+                let team_id_clone = team_id;
+                async move { client_clone.get(TransfersRequest::new(team_id_clone)).await }
+            },
+            DEFAULT_MAX_RETRIES,
+        )
+        .await?;
         Ok(transfers_response
             .into_iter()
             .map(|t| (&t).into())

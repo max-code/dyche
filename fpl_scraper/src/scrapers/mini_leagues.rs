@@ -2,7 +2,7 @@ use std::time::{Duration, SystemTime};
 
 use crate::error::ScraperError;
 use crate::scraper::{Scraper, ScraperOrder, ShouldScrape};
-use crate::NoScrapeReason;
+use crate::{with_retry, NoScrapeReason, DEFAULT_MAX_RETRIES};
 use async_trait::async_trait;
 use fpl_api::responses::mini_league::{MiniLeagueResponse, Standing};
 use fpl_common::types::LeagueId;
@@ -43,11 +43,38 @@ impl MiniLeaguesScraper {
     ) -> Result<(MiniLeagueResponse, Vec<Standing>), ScraperError> {
         let mut mini_league_standings: Vec<Standing> = Vec::new();
         let mut page = 1;
-        let mut current_page = client.get(MiniLeagueRequest::new(league_id, page)).await?;
+        let mut current_page = with_retry(
+            || {
+                let client_clone = client.clone();
+                let league_id_clone = league_id;
+                async move {
+                    client_clone
+                        .get(MiniLeagueRequest::new(league_id_clone, page))
+                        .await
+                }
+            },
+            DEFAULT_MAX_RETRIES,
+        )
+        .await?;
+
         mini_league_standings.extend(current_page.standings.results.clone());
         while current_page.standings.has_next {
             page += 1;
-            current_page = client.get(MiniLeagueRequest::new(league_id, page)).await?;
+            current_page = with_retry(
+                || {
+                    let client_clone = client.clone();
+                    let league_id_clone = league_id;
+                    let page_clone = page;
+                    async move {
+                        client_clone
+                            .get(MiniLeagueRequest::new(league_id_clone, page_clone))
+                            .await
+                    }
+                },
+                DEFAULT_MAX_RETRIES,
+            )
+            .await?;
+
             mini_league_standings.extend(current_page.standings.results.clone());
         }
 
