@@ -2,7 +2,7 @@ use std::time::{Duration, SystemTime};
 
 use crate::error::ScraperError;
 use crate::scraper::{Scraper, ScraperOrder, ShouldScrape};
-use crate::NoScrapeReason;
+use crate::{with_retry, NoScrapeReason};
 use async_trait::async_trait;
 use fpl_db::models::{PlayerFixtureDb, PlayerHistoryDb, PlayerHistoryPastDb};
 use fpl_db::queries::player::{
@@ -49,7 +49,15 @@ impl PlayersScraper {
         ),
         ScraperError,
     > {
-        let player = client.get(PlayerRequest::new(player_id)).await?;
+        let player: fpl_api::responses::player::PlayerResponse = with_retry(
+            || {
+                let client_clone = client.clone();
+                let player_id_clone = player_id;
+                async move { client_clone.get(PlayerRequest::new(player_id_clone)).await }
+            },
+            3,
+        )
+        .await?;
 
         // Process fixtures
         let fixtures: Vec<PlayerFixtureDb> = player
