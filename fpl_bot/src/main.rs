@@ -8,8 +8,11 @@ use commands::{captains, chips, deadline, hits, loglevel, register, table, team,
 
 use fpl_api::FplClient;
 use poise::serenity_prelude as serenity;
-use sqlx::PgPool;
-use std::sync::Arc;
+use sqlx::{
+    postgres::{PgConnectOptions, PgPoolOptions},
+    PgPool,
+};
+use std::{str::FromStr, sync::Arc, time::Duration};
 use tracing::{error, info};
 use tracing_subscriber::{prelude::*, reload, EnvFilter, Registry};
 
@@ -71,7 +74,18 @@ async fn main() -> Result<(), Box<(dyn std::error::Error + std::marker::Send + S
         | serenity::GatewayIntents::GUILD_MEMBERS
         | serenity::prelude::GatewayIntents::MESSAGE_CONTENT;
 
-    let pool = Arc::new(PgPool::connect(&database_url).await?);
+    let options = PgConnectOptions::from_str(&database_url)?
+        .application_name("fpl_db")
+        .statement_cache_capacity(500);
+
+    let pool = Arc::new(
+        PgPoolOptions::new()
+            .max_connections(15)
+            .min_connections(5)
+            .acquire_timeout(Duration::from_secs(5))
+            .connect_with(options)
+            .await?,
+    );
     let client = Arc::new(FplClient::new());
 
     let framework = poise::Framework::builder()
