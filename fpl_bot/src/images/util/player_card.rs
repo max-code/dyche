@@ -15,6 +15,7 @@ pub enum GameStatus {
 pub enum PlayerGameInfo {
     Status(GameStatus),
     Fixture(String),
+    FreeText(String),
 }
 
 impl PlayerGameInfo {
@@ -25,6 +26,7 @@ impl PlayerGameInfo {
                 GameStatus::Played(points) => format!("{} pts", points),
             },
             PlayerGameInfo::Fixture(fixture) => fixture.clone(),
+            PlayerGameInfo::FreeText(text) => text.clone(),
         }
     }
 }
@@ -36,7 +38,14 @@ pub struct PlayerInfo {
     pub games: Vec<PlayerGameInfo>,
     pub captain: bool,
     pub vice_captain: bool,
-    pub multiplier: i16,
+
+    // Style properties
+    border_color: String,
+    name_bg_color: String,
+    name_text_color: String,
+    status_active_bg_color: String,
+    status_inactive_bg_color: String,
+    status_text_color: String,
 }
 
 impl PlayerInfo {
@@ -46,7 +55,6 @@ impl PlayerInfo {
         games: Vec<PlayerGameInfo>,
         captain: bool,
         vice_captain: bool,
-        multiplier: i16,
     ) -> Self {
         Self {
             name,
@@ -54,8 +62,44 @@ impl PlayerInfo {
             games,
             captain,
             vice_captain,
-            multiplier,
+            border_color: GREEN_COLOUR.to_string(),
+            name_bg_color: WHITE_COLOUR.to_string(),
+            name_text_color: PURPLE_COLOUR.to_string(),
+            status_active_bg_color: PURPLE_COLOUR.to_string(),
+            status_inactive_bg_color: GREY_COLOUR.to_string(),
+            status_text_color: WHITE_COLOUR.to_string(),
         }
+    }
+
+    // Style methods - these return &mut Self so they can be chained
+    pub fn border_color(&mut self, color: impl Into<String>) -> &mut Self {
+        self.border_color = color.into();
+        self
+    }
+
+    pub fn name_bg_color(&mut self, color: impl Into<String>) -> &mut Self {
+        self.name_bg_color = color.into();
+        self
+    }
+
+    pub fn name_text_color(&mut self, color: impl Into<String>) -> &mut Self {
+        self.name_text_color = color.into();
+        self
+    }
+
+    pub fn status_active_bg_color(&mut self, color: impl Into<String>) -> &mut Self {
+        self.status_active_bg_color = color.into();
+        self
+    }
+
+    pub fn status_inactive_bg_color(&mut self, color: impl Into<String>) -> &mut Self {
+        self.status_inactive_bg_color = color.into();
+        self
+    }
+
+    pub fn status_text_color(&mut self, color: impl Into<String>) -> &mut Self {
+        self.status_text_color = color.into();
+        self
     }
 
     pub fn to_card_svg(
@@ -68,6 +112,7 @@ impl PlayerInfo {
         let image_height = height * 2 / 3;
         let text_row_height = (height - image_height) / 2;
         let border_radius = 8;
+        let stroke_width: f64 = 2.0;
 
         let group = Group::new();
 
@@ -80,8 +125,8 @@ impl PlayerInfo {
             .set("rx", border_radius)
             .set("ry", border_radius)
             .set("fill", "rgba(27, 12, 12, 0.1)")
-            .set("stroke", GREEN_COLOUR)
-            .set("stroke-width", 2);
+            .set("stroke", self.border_color.as_str())
+            .set("stroke-width", stroke_width);
 
         // Player image
         let image_path = format!(
@@ -106,10 +151,10 @@ impl PlayerInfo {
         let name_y = y + image_height;
         let (name_bg, name_text) = CenteredTextBox::new()
             .text(&name)
-            .dimensions(width.into(), text_row_height.into())
-            .position(x.into(), name_y.into())
-            .background_color(WHITE_COLOUR)
-            .font_color(PURPLE_COLOUR)
+            .dimensions(width as f64 - stroke_width, text_row_height.into())
+            .position(x as f64 + (stroke_width / 2.0), name_y.into())
+            .background_color(&self.name_bg_color)
+            .font_color(&self.name_text_color)
             .build()?;
 
         // BOTTOM ROW: Game Info (pts or opponent)
@@ -120,13 +165,14 @@ impl PlayerInfo {
             .collect::<Vec<String>>()
             .join(", ");
 
-        let status_bg_colour = match self
-            .games
-            .iter()
-            .any(|f| matches!(f, PlayerGameInfo::Status(GameStatus::Played(_))))
-        {
-            true => PURPLE_COLOUR,
-            false => GREY_COLOUR,
+        let status_bg_colour = match self.games.iter().any(|f| {
+            matches!(
+                f,
+                PlayerGameInfo::Status(GameStatus::Played(_)) | PlayerGameInfo::FreeText(_)
+            )
+        }) {
+            true => self.status_active_bg_color.clone(),
+            false => self.status_inactive_bg_color.clone(),
         };
 
         let status_y = name_y + text_row_height;
@@ -134,8 +180,8 @@ impl PlayerInfo {
             .text(&status_text)
             .dimensions(width.into(), text_row_height.into())
             .position(x.into(), status_y.into())
-            .background_color(status_bg_colour)
-            .font_color(WHITE_COLOUR)
+            .background_color(&status_bg_colour)
+            .font_color(&self.status_text_color)
             .corner_rounding(CornerRounding::Bottom)
             .radius(border_radius as f64)
             .build()?;

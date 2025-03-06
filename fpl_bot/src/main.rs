@@ -4,7 +4,9 @@ mod constants;
 pub mod images;
 mod utils;
 
-use commands::{captains, chips, deadline, hits, loglevel, register, table, team, unique, whohas};
+use commands::{
+    captains, chips, deadline, differentials, hits, loglevel, register, table, team, unique, whohas,
+};
 
 use fpl_api::FplClient;
 use poise::serenity_prelude as serenity;
@@ -101,6 +103,7 @@ async fn main() -> Result<(), Box<(dyn std::error::Error + std::marker::Send + S
                 table(),
                 team(),
                 unique(),
+                differentials(),
             ],
             on_error: |error| Box::pin(handle_bot_error(error)),
             allowed_mentions: Some(

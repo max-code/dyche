@@ -1,5 +1,6 @@
 use std::time::Instant;
 
+use fpl_bot::images::{UniquePlayers, UniqueRenderer};
 use fpl_common::types::{GameWeekId, LeagueId};
 use fpl_db::queries::{
     game_week::get_current_game_week, mini_league::get_league_name,
@@ -9,7 +10,10 @@ use serenity::all::User;
 use tracing::debug;
 
 use crate::{
-    autocompletes::autocomplete_mini_league, log_call, log_timer, start_timer, utils::embed::Embed,
+    autocompletes::autocomplete_mini_league,
+    commands::get_image_file_path,
+    log_call, log_timer, start_timer,
+    utils::embed::{Embed, EmbedPage},
     Context, Error,
 };
 
@@ -52,12 +56,17 @@ pub async fn unique(
     let league_name = get_league_name(&ctx.data().pool, league_id).await?;
     log_timer!(timer, COMMAND, ctx, "fetched league_name");
 
+    let file_name = get_image_file_path(COMMAND, &ctx);
+    let renderer = UniqueRenderer::default();
+    renderer.render(unique_players, &file_name).await?;
+    log_timer!(timer, COMMAND, ctx, "rendered image");
+
     embed
         .success()
         .title(format!(
             "Unique players for {team_name} in Gameweek {game_week_id} among {league_name}"
         ))
-        .add_pages_from_strings(unique_players, Some(10))
+        .add_page(EmbedPage::new().with_image(file_name))
         .send()
         .await?;
 
@@ -69,7 +78,7 @@ async fn get_unique_player_names_for_team_in_league(
     league_id: LeagueId,
     discord_id: i64,
     game_week_id: i16,
-) -> Result<Vec<String>, Error> {
+) -> Result<UniquePlayers, Error> {
     let records = sqlx::query!(
         r#"
         WITH 
@@ -94,7 +103,7 @@ async fn get_unique_player_names_for_team_in_league(
             AND tgwp.team_id IN (SELECT team_id FROM league_teams)
         )
         -- Select player names that are only on the user's team
-        SELECT p.web_name
+        SELECT p.web_name, p.code, tgwp.multiplier, tgwp.is_captain, tgwp.is_vice_captain
         FROM team_game_week_picks tgwp
         JOIN players p ON p.id = tgwp.player_id
         JOIN user_team ut ON tgwp.team_id = ut.team_id
@@ -110,10 +119,17 @@ async fn get_unique_player_names_for_team_in_league(
     .fetch_all(&*ctx.data().pool)
     .await?;
 
-    let player_names: Vec<String> = records
-        .into_iter()
-        .map(|row| format!("- {}", row.web_name))
-        .collect();
+    let mut unique_players = UniquePlayers::new();
 
-    Ok(player_names)
+    for row in records {
+        unique_players = unique_players.add_player(
+            row.web_name,
+            row.code as u32,
+            row.multiplier,
+            row.is_captain,
+            row.is_vice_captain,
+        );
+    }
+
+    Ok(unique_players)
 }

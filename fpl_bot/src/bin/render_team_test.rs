@@ -18,7 +18,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             vec![PlayerGameInfo::Status(GameStatus::Played(6))],
             false,
             false,
-            1,
         ))
         // Defenders
         .add_defender(PlayerInfo::new(
@@ -27,7 +26,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             vec![PlayerGameInfo::Fixture("NEW (H)".to_string())],
             false,
             false,
-            1,
         ))
         .add_defender(PlayerInfo::new(
             "Salah".to_string(),
@@ -35,7 +33,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             vec![PlayerGameInfo::Status(GameStatus::NotPlayed)],
             false,
             false,
-            1,
         ))
         .add_defender(PlayerInfo::new(
             "Salah".to_string(),
@@ -43,7 +40,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             vec![PlayerGameInfo::Fixture("ARS (A)".to_string())],
             false,
             false,
-            1,
         ))
         // Midfielders
         .add_midfielder(PlayerInfo::new(
@@ -52,7 +48,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             vec![PlayerGameInfo::Status(GameStatus::Played(12))],
             true,
             false,
-            2,
         ))
         .add_midfielder(PlayerInfo::new(
             "Salah".to_string(),
@@ -63,7 +58,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ],
             false,
             true,
-            1,
         ))
         .add_midfielder(PlayerInfo::new(
             "Salah".to_string(),
@@ -71,7 +65,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             vec![PlayerGameInfo::Status(GameStatus::Played(6))],
             false,
             false,
-            1,
         ))
         .add_midfielder(PlayerInfo::new(
             "Salah".to_string(),
@@ -79,7 +72,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             vec![PlayerGameInfo::Fixture("TOT (A)".to_string())],
             false,
             false,
-            1,
         ))
         .add_midfielder(PlayerInfo::new(
             "Salah".to_string(),
@@ -87,7 +79,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             vec![PlayerGameInfo::Status(GameStatus::Played(6))],
             false,
             false,
-            1,
         ))
         // Forwards
         .add_forward(PlayerInfo::new(
@@ -96,7 +87,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             vec![PlayerGameInfo::Status(GameStatus::Played(6))],
             false,
             false,
-            1,
         ))
         .add_forward(PlayerInfo::new(
             "Salah".to_string(),
@@ -104,7 +94,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             vec![PlayerGameInfo::Fixture("CHE (H)".to_string())],
             false,
             false,
-            1,
         ))
         // Bench
         .add_bench_player(PlayerInfo::new(
@@ -113,7 +102,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             vec![PlayerGameInfo::Status(GameStatus::NotPlayed)],
             false,
             false,
-            1,
         ))
         .add_bench_player(PlayerInfo::new(
             "Salah".to_string(),
@@ -121,7 +109,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             vec![PlayerGameInfo::Fixture("EVE (A)".to_string())],
             false,
             false,
-            1,
         ))
         .add_bench_player(PlayerInfo::new(
             "Salah".to_string(),
@@ -132,7 +119,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ],
             false,
             false,
-            1,
         ))
         .add_bench_player(PlayerInfo::new(
             "Salah".to_string(),
@@ -143,7 +129,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ],
             false,
             false,
-            1,
         ))
         .add_manager(PlayerInfo::new(
             "Slot".to_string(),
@@ -151,7 +136,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             vec![PlayerGameInfo::Fixture("BHA (H)".to_string())],
             false,
             false,
-            1,
         ))
         .add_chip(Chip::AssMan)
         .add_transfer(TransferInfo::new(

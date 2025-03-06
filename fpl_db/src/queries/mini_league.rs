@@ -112,3 +112,23 @@ pub async fn get_league_name(pool: &PgPool, league_id: LeagueId) -> Result<Strin
         .map(|row| row.name)
         .unwrap_or_else(|| "N/A".to_string()))
 }
+
+pub async fn get_discord_users_from_league_id(
+    pool: &PgPool,
+    league_id: LeagueId,
+) -> Result<Vec<i64>, sqlx::Error> {
+    let records = sqlx::query!(
+        "select discord_id 
+        from discord_users du 
+        join mini_league_standings mls 
+        on du.team_id = mls.team_id and mls.league_id = $1;",
+        i32::from(league_id)
+    )
+    .fetch_all(pool)
+    .await?
+    .into_iter()
+    .map(|row| row.discord_id)
+    .collect();
+
+    Ok(records)
+}

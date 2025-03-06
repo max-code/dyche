@@ -13,7 +13,6 @@ use fpl_db::queries::team_game_week::{
 use futures::StreamExt;
 use std::collections::HashSet;
 use std::sync::Arc;
-use std::time::Duration;
 use tracing::{debug, info, warn};
 
 use fpl_api::requests::{MiniLeagueRequest, TeamGameWeekRequest, TeamRequest};

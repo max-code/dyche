@@ -275,7 +275,6 @@ async fn get_player_data(
             game_info.clone(),
             result.captain,
             result.vice_captain,
-            result.multiplier,
         );
 
         match result.position {

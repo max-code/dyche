@@ -8,6 +8,7 @@ use std::{
 };
 use tracing::{debug, warn};
 
+use crate::constants::text_response::MAX_ROWS_PER_PAGE;
 use crate::{Context, Error};
 pub trait State {}
 pub trait Sendable: State {}
@@ -472,7 +473,7 @@ impl<'a> Embed<'a, SuccessState> {
         strings: Vec<impl Into<String>>,
         rows_per_page: Option<usize>,
     ) -> Self {
-        let rows_per_page = rows_per_page.unwrap_or(10);
+        let rows_per_page = rows_per_page.unwrap_or(MAX_ROWS_PER_PAGE);
 
         let strings: Vec<String> = strings.into_iter().map(|s| s.into()).collect();
         for chunk in strings.chunks(rows_per_page) {

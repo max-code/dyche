@@ -10,6 +10,7 @@ use usvg::{Options, Tree};
 use crate::images::util::PlayerInfo;
 
 use super::{
+    calculate_player_card_xs,
     colours::{
         DARK_PITCH_GREEN_COLOUR, GREEN_COLOUR, PITCH_GREEN_COLOUR, PURPLE_COLOUR, WHITE_COLOUR,
     },
@@ -242,7 +243,13 @@ impl TeamRenderer {
         let header_height = self.header_height + self.header_vertical_padding;
         let players_height =
             (4 * self.player_card_height) + (5 * self.player_card_vertical_padding);
-        let bench_height = self.player_card_height + (2 * self.player_card_vertical_padding);
+        let mut bench_height = self.player_card_height + self.player_card_vertical_padding;
+        // If we have no transfers, need an extra little bit of padding
+        bench_height += if data.transfers.is_empty() {
+            self.player_card_vertical_padding / 2
+        } else {
+            0
+        };
         let transfer_rows = ((data.transfers.len() + 1) / 2) as u32;
         let transfers_height = if !data.transfers.is_empty() {
             ((transfer_rows + 1) * self.transfer_row_height)
@@ -309,25 +316,15 @@ impl TeamRenderer {
         std::fs::write(path, pixmap.encode_png().unwrap())
     }
 
-    fn calculate_player_card_xs(&self, num_cards: usize) -> Vec<u32> {
-        let total_box_width = self.player_card_width * (num_cards as u32);
-        let remaining_space = self.width.saturating_sub(total_box_width);
-
-        let gaps = num_cards + 1;
-        let gap_width = remaining_space / (gaps as u32);
-        (0..num_cards)
-            .map(|i| gap_width + i as u32 * (self.player_card_width + gap_width))
-            .collect()
-    }
-
     fn add_player_cards(
         &self,
         data: &TeamData,
         mut document: Document,
     ) -> Result<Document, std::io::Error> {
-        let mut y_offset = self.header_height + (2 * self.header_vertical_padding);
+        let mut y_offset: u32 = self.header_height + (2 * self.header_vertical_padding);
         for (idx, row) in data.get_player_rows().iter().enumerate() {
-            let xs = self.calculate_player_card_xs(row.len());
+            let xs: Vec<u32> =
+                calculate_player_card_xs(self.player_card_width, self.width, row.len() as u32);
             if idx == 4 {
                 y_offset += self.player_card_vertical_padding;
             }
