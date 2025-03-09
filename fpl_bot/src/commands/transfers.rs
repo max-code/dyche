@@ -95,14 +95,15 @@ pub async fn transfers(
             return Err("Unknown league_or_user_type".into());
         }
     };
+    let title = format!(
+        "Transfers for {} in GW{}",
+        user_or_league_name, game_week_id
+    );
 
     if transfers.user_to_transfers.is_empty() {
         embed
             .success()
-            .title(format!(
-                "Transfers for {} in GW{}",
-                user_or_league_name, game_week_id
-            ))
+            .title(title)
             .add_page(EmbedPage::new().add_row("No transfers."))
             .send()
             .await?;
@@ -116,10 +117,7 @@ pub async fn transfers(
 
     embed
         .success()
-        .title(format!(
-            "transfers for {} in GW{}",
-            user_or_league_name, game_week_id
-        ))
+        .title(title)
         .add_page(EmbedPage::new().with_image(file_name))
         .send()
         .await?;

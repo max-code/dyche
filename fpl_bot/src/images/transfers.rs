@@ -5,10 +5,7 @@ use tiny_skia::Pixmap;
 use usvg::{Options, Tree};
 
 use super::colours::{GREEN_COLOUR, WHITE_COLOUR};
-use super::{
-    calculate_player_card_xs, CenteredTextBox, CornerRounding, FontWeight, PlayerGameInfo,
-    PlayerInfo,
-};
+use super::{calculate_player_card_xs, CenteredTextBox, CornerRounding, FontWeight, PlayerInfo};
 use crate::images::constants::colours::PURPLE_COLOUR;
 
 #[derive(Debug, Clone)]
