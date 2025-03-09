@@ -132,3 +132,20 @@ pub async fn get_discord_users_from_league_id(
 
     Ok(records)
 }
+
+pub async fn get_team_ids_from_league_id(
+    pool: &PgPool,
+    league_id: LeagueId,
+) -> Result<Vec<i32>, sqlx::Error> {
+    let records = sqlx::query!(
+        "select team_id from mini_league_standings where league_id = $1;",
+        i32::from(league_id)
+    )
+    .fetch_all(pool)
+    .await?
+    .into_iter()
+    .map(|row| row.team_id)
+    .collect();
+
+    Ok(records)
+}

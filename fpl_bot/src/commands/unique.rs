@@ -103,10 +103,11 @@ async fn get_unique_player_names_for_team_in_league(
             AND tgwp.team_id IN (SELECT team_id FROM league_teams)
         )
         -- Select player names that are only on the user's team
-        SELECT p.web_name, p.code, tgwp.multiplier, tgwp.is_captain, tgwp.is_vice_captain
+        SELECT p.web_name, p.code, tgwp.multiplier, tgwp.is_captain, tgwp.is_vice_captain, po.opponents
         FROM team_game_week_picks tgwp
         JOIN players p ON p.id = tgwp.player_id
         JOIN user_team ut ON tgwp.team_id = ut.team_id
+        join player_opponents po on p.id = po.player_id and po.game_week_id = tgwp.game_week_id
         WHERE tgwp.game_week_id = $3
         AND tgwp.player_id NOT IN (
             SELECT player_id FROM other_league_team_players
@@ -128,6 +129,7 @@ async fn get_unique_player_names_for_team_in_league(
             row.multiplier,
             row.is_captain,
             row.is_vice_captain,
+            row.opponents.unwrap_or("N/A".to_string()),
         );
     }
 

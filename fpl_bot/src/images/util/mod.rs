@@ -38,6 +38,7 @@ pub fn calculate_player_card_xs(
     player_card_width: u32,
     total_width: u32,
     num_cards: u32,
+    x_offset: u32,
 ) -> Vec<u32> {
     let total_box_width = player_card_width * num_cards;
     let remaining_space = total_width.saturating_sub(total_box_width);
@@ -45,6 +46,6 @@ pub fn calculate_player_card_xs(
     let gaps = num_cards + 1;
     let gap_width = remaining_space / gaps;
     (0..num_cards)
-        .map(|i| gap_width + i * (player_card_width + gap_width))
+        .map(|i| gap_width + i * (player_card_width + gap_width) + x_offset)
         .collect()
 }

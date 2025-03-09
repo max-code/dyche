@@ -96,3 +96,19 @@ pub async fn get_team_name_from_discord_id(
         })
         .unwrap_or_else(|| "N/A".to_string()))
 }
+
+pub async fn get_team_ids_from_discord_ids(
+    pool: &PgPool,
+    discord_ids: &[i64],
+) -> Result<Vec<i32>, sqlx::Error> {
+    let records = sqlx::query!(
+        "SELECT team_id FROM discord_users WHERE discord_id = ANY($1)",
+        &discord_ids
+    )
+    .fetch_all(pool)
+    .await?;
+
+    let team_ids = records.into_iter().map(|row| row.team_id).collect();
+
+    Ok(team_ids)
+}

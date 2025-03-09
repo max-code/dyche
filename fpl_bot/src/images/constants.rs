@@ -6,6 +6,7 @@ pub mod colours {
     pub const GREY_COLOUR: &str = "#a1a1a1";
     pub const WHITE_COLOUR: &str = "#ffffff";
     pub const OFF_WHITE_COLOUR: &str = "#f0f0f0";
+    pub const BLACK_COLOUR: &str = "#121212";
 }
 
 pub mod fonts {

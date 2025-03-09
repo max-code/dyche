@@ -324,7 +324,7 @@ impl TeamRenderer {
         let mut y_offset: u32 = self.header_height + (2 * self.header_vertical_padding);
         for (idx, row) in data.get_player_rows().iter().enumerate() {
             let xs: Vec<u32> =
-                calculate_player_card_xs(self.player_card_width, self.width, row.len() as u32);
+                calculate_player_card_xs(self.player_card_width, self.width, row.len() as u32, 0);
             if idx == 4 {
                 y_offset += self.player_card_vertical_padding;
             }

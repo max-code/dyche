@@ -31,13 +31,9 @@ impl UniquePlayers {
         multiplier: i16,
         is_captain: bool,
         is_vice_captain: bool,
+        opponents: String,
     ) -> Self {
-        let text = if multiplier == 0 {
-            "Benched".to_string()
-        } else {
-            "Starter".to_string()
-        };
-        let games = vec![PlayerGameInfo::FreeText(text)];
+        let games = vec![PlayerGameInfo::FreeText(opponents)];
         self.players.push(PlayerInfo::new(
             name,
             code,
@@ -111,6 +107,7 @@ impl UniqueRenderer {
                 self.player_card_width,
                 self.width,
                 players_chunk.len() as u32,
+                0,
             );
             let player_y_pos = y_pos + self.internal_vertical_padding;
 

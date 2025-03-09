@@ -1,19 +1,16 @@
 use std::time::Instant;
 
-use fpl_bot::images::{DifferentialKey, Differentials, UniquePlayers, UniqueRenderer};
-use fpl_common::types::{game_week_id, GameWeekId, LeagueId};
+use fpl_bot::images::{DifferentialKey, Differentials, DifferentialsRenderer};
+use fpl_common::types::{GameWeekId, LeagueId};
 use fpl_db::queries::{
     game_week::get_current_game_week,
-    mini_league::{get_discord_users_from_league_id, get_league_name},
-    team::get_team_name_from_discord_id,
+    mini_league::{get_league_name, get_team_ids_from_league_id},
+    team::{get_team_ids_from_discord_ids, get_team_name_from_discord_id},
 };
-use serenity::all::User;
 use tracing::debug;
 
 use crate::{
-    autocompletes::{
-        autocomplete_league_or_user, autocomplete_league_or_user_value, league_or_user,
-    },
+    autocompletes::{autocomplete_league_or_user, autocomplete_league_or_user_value},
     commands::get_image_file_path,
     log_call, log_timer, start_timer,
     utils::embed::{Embed, EmbedPage},
@@ -58,73 +55,94 @@ pub async fn differentials(
 
     let value: i64 = league_or_user_value.parse::<i64>()?;
 
-    let discord_ids = match league_or_user.as_str() {
+    let team_ids = match league_or_user.as_str() {
         "User" => {
-            vec![value, ctx.author().id.get() as i64]
+            let ids = vec![value, ctx.author().id.get() as i64];
+            let team_ids = get_team_ids_from_discord_ids(&ctx.data().pool, &ids).await?;
+            log_timer!(timer, COMMAND, ctx, "got team_ids from discord_ids");
+            team_ids
         }
         "League" => {
-            let discord_ids =
-                get_discord_users_from_league_id(&ctx.data().pool, LeagueId::new(value as i32))
-                    .await?;
-            log_timer!(timer, COMMAND, ctx, "got discord_ids for ml");
-            discord_ids
+            let team_ids =
+                get_team_ids_from_league_id(&ctx.data().pool, LeagueId::new(value as i32)).await?;
+            log_timer!(timer, COMMAND, ctx, "got team_ids for ml");
+            team_ids
         }
         _ => {
             return Err("Unknown league_or_user_type".into());
         }
     };
 
-    let differentials = get_differentials_for_user_ids(ctx, discord_ids, game_week_id).await?;
-    println!("{:#?}", differentials);
+    let user_or_league_name = match league_or_user.as_str() {
+        "User" => {
+            let caller_name = get_team_name_from_discord_id(&ctx.data().pool, value).await?;
+            let other_user_name =
+                get_team_name_from_discord_id(&ctx.data().pool, ctx.author().id.get() as i64)
+                    .await?;
+            log_timer!(timer, COMMAND, ctx, "got team names from discord_ids");
+            format!("{caller_name} and {other_user_name}")
+        }
+        "League" => {
+            let league_name =
+                get_league_name(&ctx.data().pool, LeagueId::new(value as i32)).await?;
+            log_timer!(timer, COMMAND, ctx, "got league name for ml");
+            league_name
+        }
+        _ => {
+            return Err("Unknown league_or_user_type".into());
+        }
+    };
 
-    // let file_name = get_image_file_path(COMMAND, &ctx);
-    // let renderer = UniqueRenderer::default();
-    // renderer.render(unique_players, &file_name).await?;
-    // log_timer!(timer, COMMAND, ctx, "rendered image");
+    let differentials = get_differentials_for_user_ids(ctx, team_ids, game_week_id).await?;
 
-    // embed
-    //     .success()
-    //     .title(format!(
-    //         "Unique players for {team_name} in Gameweek {game_week_id} among {league_name}"
-    //     ))
-    //     .add_page(EmbedPage::new().with_image(file_name))
-    //     .send()
-    //     .await?;
+    let file_name = get_image_file_path(COMMAND, &ctx);
+    let renderer = DifferentialsRenderer::default();
+    renderer.render(differentials, &file_name).await?;
+    log_timer!(timer, COMMAND, ctx, "rendered differentials image");
+
+    embed
+        .success()
+        .title(format!(
+            "Differentials for {} in GW{}",
+            user_or_league_name, game_week_id
+        ))
+        .add_page(EmbedPage::new().with_image(file_name))
+        .send()
+        .await?;
 
     Ok(())
 }
 
 async fn get_differentials_for_user_ids(
     ctx: Context<'_>,
-    discord_ids: Vec<i64>,
+    team_ids: Vec<i32>,
     game_week_id: i16,
 ) -> Result<Differentials, Error> {
     let records = sqlx::query!(
         r#"
-            SELECT name, player_first_name as user_first_name, player_last_name as user_last_name, discord_id, player_name, code, multiplier, is_captain, is_vice_captain
+            SELECT name, player_first_name as user_first_name, player_last_name as user_last_name, player_name, code, multiplier, is_captain, is_vice_captain, opponents
             FROM (
                 SELECT 
                 t."name", t.player_first_name , t.player_last_name,
-                    du.discord_id, 
                     p.web_name as player_name,
                     p.code,
                     tgwp.multiplier,
                     tgwp.is_captain, 
                     tgwp.is_vice_captain,
+                    po.opponents,
                     COUNT(*) OVER (PARTITION BY tgwp.player_id) as player_count
-                FROM discord_users du
-                JOIN teams t ON du.team_id = t.id
+                FROM teams t
                 JOIN team_game_week_picks tgwp ON t.id = tgwp.team_id
                 JOIN players p ON p.id = tgwp.player_id
+                JOIN player_opponents po on p.id = po.player_id and po.game_week_id = tgwp.game_week_id
                 WHERE tgwp.game_week_id = $1 
-                AND du.discord_id = ANY($2)
+                AND t.id = ANY($2)
                 AND tgwp.multiplier > 0
             ) AS filtered_players
-            WHERE player_count = 1
-            order by discord_id;        
+            WHERE player_count = 1;        
         "#,
         game_week_id,
-        &discord_ids as &[i64]
+        &team_ids
     )
     .fetch_all(&*ctx.data().pool)
     .await?;
@@ -145,6 +163,7 @@ async fn get_differentials_for_user_ids(
             row.multiplier,
             row.is_captain,
             row.is_vice_captain,
+            row.opponents.unwrap_or("N/A".to_string()),
         );
     }
 
