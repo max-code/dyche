@@ -4,7 +4,7 @@ use svg::Document;
 use tiny_skia::Pixmap;
 use usvg::{Options, Tree};
 
-use super::colours::{OFF_WHITE_COLOUR, WHITE_COLOUR};
+use super::colours::{GREY_COLOUR, OFF_WHITE_COLOUR, WHITE_COLOUR};
 use super::{calculate_player_card_xs, PlayerGameInfo, PlayerInfo};
 use crate::images::constants::colours::PURPLE_COLOUR;
 
@@ -34,13 +34,17 @@ impl UniquePlayers {
         opponents: String,
     ) -> Self {
         let games = vec![PlayerGameInfo::FreeText(opponents)];
-        self.players.push(PlayerInfo::new(
-            name,
-            code,
-            games,
-            is_captain,
-            is_vice_captain,
-        ));
+
+        // Grey them out if they arent playing. Will be active_bg_colour as we are using free text
+        let bg_colour = match multiplier {
+            0 => GREY_COLOUR,
+            _ => PURPLE_COLOUR,
+        };
+
+        self.players.push(
+            PlayerInfo::new(name, code, games, is_captain, is_vice_captain)
+                .status_active_bg_color(bg_colour),
+        );
 
         self
     }

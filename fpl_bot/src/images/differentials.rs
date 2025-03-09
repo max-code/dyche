@@ -50,7 +50,6 @@ impl Differentials {
         key: DifferentialKey,
         player_name: String,
         code: i32,
-        multiplier: i16,
         is_captain: bool,
         is_vice_captain: bool,
         opponents: String,

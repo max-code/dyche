@@ -87,7 +87,7 @@ impl PlayerInfo {
         self
     }
 
-    pub fn status_active_bg_color(&mut self, color: impl Into<String>) -> &mut Self {
+    pub fn status_active_bg_color(mut self, color: impl Into<String>) -> Self {
         self.status_active_bg_color = color.into();
         self
     }

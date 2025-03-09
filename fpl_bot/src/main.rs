@@ -5,7 +5,8 @@ pub mod images;
 mod utils;
 
 use commands::{
-    captains, chips, deadline, differentials, hits, loglevel, register, table, team, unique, whohas,
+    captains, chips, deadline, differentials, hits, loglevel, register, table, team, transfers,
+    unique, whohas,
 };
 
 use fpl_api::FplClient;
@@ -104,6 +105,7 @@ async fn main() -> Result<(), Box<(dyn std::error::Error + std::marker::Send + S
                 team(),
                 unique(),
                 differentials(),
+                transfers(),
             ],
             on_error: |error| Box::pin(handle_bot_error(error)),
             allowed_mentions: Some(

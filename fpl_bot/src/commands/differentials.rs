@@ -120,13 +120,12 @@ async fn get_differentials_for_user_ids(
 ) -> Result<Differentials, Error> {
     let records = sqlx::query!(
         r#"
-            SELECT name, player_first_name as user_first_name, player_last_name as user_last_name, player_name, code, multiplier, is_captain, is_vice_captain, opponents
+            SELECT name, player_first_name as user_first_name, player_last_name as user_last_name, player_name, code, is_captain, is_vice_captain, opponents
             FROM (
                 SELECT 
                 t."name", t.player_first_name , t.player_last_name,
                     p.web_name as player_name,
                     p.code,
-                    tgwp.multiplier,
                     tgwp.is_captain, 
                     tgwp.is_vice_captain,
                     po.opponents,
@@ -160,7 +159,6 @@ async fn get_differentials_for_user_ids(
             key,
             row.player_name,
             row.code,
-            row.multiplier,
             row.is_captain,
             row.is_vice_captain,
             row.opponents.unwrap_or("N/A".to_string()),
