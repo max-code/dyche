@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use fpl_bot::images::{DifferentialKey, Differentials, DifferentialsRenderer};
+use crate::images::{DifferentialKey, Differentials, DifferentialsRenderer};
 use fpl_common::types::{GameWeekId, LeagueId};
 use fpl_db::queries::{
     game_week::get_current_game_week,

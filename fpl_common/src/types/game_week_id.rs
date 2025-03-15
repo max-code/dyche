@@ -6,7 +6,9 @@ use std::fmt::Display;
 use std::ops::Deref;
 use std::str::FromStr;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, sqlx::FromRow,
+)]
 #[serde(try_from = "i16")]
 #[derive(sqlx::Type)]
 #[sqlx(transparent)]

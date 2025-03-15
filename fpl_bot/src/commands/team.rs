@@ -1,6 +1,6 @@
 use std::{collections::HashMap, str::FromStr, time::Instant};
 
-use fpl_bot::images::{
+use crate::images::{
     GameStatus, PlayerGameInfo, PlayerInfo, TeamData, TeamDataBuilder, TeamRenderer, TransferInfo,
 };
 use fpl_common::types::{Chip, GameWeekId, PlayerPosition};

@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use fpl_bot::images::{UniquePlayers, UniqueRenderer};
+use crate::images::{UniquePlayers, UniqueRenderer};
 use fpl_common::types::{GameWeekId, LeagueId};
 use fpl_db::queries::{
     game_week::get_current_game_week, mini_league::get_league_name,

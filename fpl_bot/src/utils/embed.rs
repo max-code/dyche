@@ -37,7 +37,7 @@ impl ReadyForSend for ErrorState {}
 
 pub trait EmbedState {
     fn emoji() -> &'static str;
-    fn color() -> (u8, u8, u8);
+    fn colour() -> (u8, u8, u8);
     fn state_name() -> &'static str;
 }
 
@@ -45,7 +45,7 @@ impl EmbedState for ProcessingState {
     fn emoji() -> &'static str {
         "<a:loading:1286983242398040125>"
     }
-    fn color() -> (u8, u8, u8) {
+    fn colour() -> (u8, u8, u8) {
         (45, 0, 77)
     }
     fn state_name() -> &'static str {
@@ -57,7 +57,7 @@ impl EmbedState for ErrorState {
     fn emoji() -> &'static str {
         "<:reject:1286991959914975284>"
     }
-    fn color() -> (u8, u8, u8) {
+    fn colour() -> (u8, u8, u8) {
         (171, 12, 44)
     }
     fn state_name() -> &'static str {
@@ -69,7 +69,7 @@ impl EmbedState for SuccessState {
     fn emoji() -> &'static str {
         "<:success:1286991961257148437>"
     }
-    fn color() -> (u8, u8, u8) {
+    fn colour() -> (u8, u8, u8) {
         (0, 255, 136)
     } // Green
     fn state_name() -> &'static str {
@@ -256,7 +256,7 @@ impl<'a, S: ReadyForSend + EmbedState + Sync + Send> Embed<'a, S> {
 
         let mut embed = CreateEmbed::new()
             .title(title)
-            .color(S::color())
+            .colour(S::colour())
             .description(page_content);
 
         embed = embed.author(CreateEmbedAuthor::new(BOT_NAME).icon_url(ICON_URL));

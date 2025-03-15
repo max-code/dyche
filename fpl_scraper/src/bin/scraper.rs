@@ -42,6 +42,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut manager = ScraperManager::new();
 
+    let fifteen_seconds = Duration::from_secs(15);
     let one_minute = Duration::from_secs(60);
     let five_minutes = Duration::from_secs(60 * 5);
     let thirty_minutes = Duration::from_secs(60 * 30);
@@ -60,7 +61,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     manager.register_scraper(teams_scraper);
 
     let game_week_players_scraper =
-        GameWeekPlayersScraper::new(Arc::clone(&pool), Arc::clone(&client), one_minute);
+        GameWeekPlayersScraper::new(Arc::clone(&pool), Arc::clone(&client), fifteen_seconds);
     manager.register_scraper(game_week_players_scraper);
 
     // Third

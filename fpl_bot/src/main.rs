@@ -2,6 +2,7 @@ mod autocompletes;
 mod commands;
 mod constants;
 pub mod images;
+pub mod notifications;
 mod utils;
 
 use commands::{
@@ -9,7 +10,9 @@ use commands::{
     unique, whohas,
 };
 
+use ::serenity::all::ChannelId;
 use fpl_api::FplClient;
+use fpl_bot::notifications::Points;
 use poise::serenity_prelude as serenity;
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions},
@@ -19,14 +22,10 @@ use std::{str::FromStr, sync::Arc, time::Duration};
 use tracing::{error, info};
 use tracing_subscriber::{prelude::*, reload, EnvFilter, Registry};
 
-struct Data {
-    pool: Arc<PgPool>,
-    client: Arc<FplClient>,
-    log_levels: Arc<reload::Handle<EnvFilter, Registry>>,
-}
-
-type Error = Box<dyn std::error::Error + Send + Sync>;
-type Context<'a> = poise::Context<'a, Data, Error>;
+use fpl_bot::commands::*;
+use fpl_bot::Context;
+use fpl_bot::Data;
+use fpl_bot::Error;
 
 async fn handle_bot_error(error: poise::FrameworkError<'_, Data, Error>) {
     match &error {
@@ -144,8 +143,20 @@ async fn main() -> Result<(), Box<(dyn std::error::Error + std::marker::Send + S
                         }
                     }
                 }
-                // Local
+
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
+
+                // Live notifs
+                let notification_channel = ChannelId::new(1074708855063330876);
+
+                let live_points_notifications = Arc::new(Points::new(
+                    Arc::clone(&pool),
+                    Arc::clone(&ctx.http),
+                    notification_channel,
+                ));
+
+                live_points_notifications.start().await?;
+
                 Ok(Data {
                     pool,
                     client,

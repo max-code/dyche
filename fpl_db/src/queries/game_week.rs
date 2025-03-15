@@ -1,3 +1,4 @@
+use fpl_common::types::GameWeekId;
 use sqlx::PgPool;
 use tracing::debug;
 
@@ -135,13 +136,20 @@ pub async fn get_current_game_week(pool: &PgPool) -> Result<GameWeek, sqlx::Erro
         "SELECT
             *
         FROM
-            game_weeks
-        WHERE
-            deadline_time <= CURRENT_TIMESTAMP
-        ORDER BY
-            deadline_time DESC
-        LIMIT
-        1;",
+            current_game_week;",
+    )
+    .fetch_one(pool)
+    .await?;
+
+    Ok(current_game_week)
+}
+
+pub async fn get_current_game_week_id(pool: &PgPool) -> Result<GameWeekId, sqlx::Error> {
+    let current_game_week = sqlx::query_as::<_, GameWeekId>(
+        "SELECT
+            id
+        FROM
+            current_game_week;",
     )
     .fetch_one(pool)
     .await?;
