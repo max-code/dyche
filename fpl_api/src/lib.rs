@@ -267,11 +267,11 @@ mod tests {
         // Act
         let request = PlayerPhotoRequest::new(
             166989,
-            fpl_common::paths::get_static_image_path("test_photo.png"),
+            fpl_common::paths::get_player_image_path("test_photo.png"),
         );
-        let response = client.get(request).await.unwrap();
+        client.get(request).await.unwrap();
 
         // Assert
-        println!("Response: {:#?}", response);
+        println!("Response");
     }
 }

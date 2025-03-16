@@ -25,11 +25,3 @@ pub fn get_generated_image_path(
         server_id.to_string()
     )
 }
-
-pub fn get_static_image_path(filename: impl ToString) -> String {
-    format!(
-        "{}/fpl_bot/static/{}.png",
-        get_base_path(),
-        filename.to_string()
-    )
-}

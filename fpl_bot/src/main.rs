@@ -14,15 +14,11 @@ use ::serenity::all::ChannelId;
 use fpl_api::FplClient;
 use fpl_bot::notifications::Points;
 use poise::serenity_prelude as serenity;
-use sqlx::{
-    postgres::{PgConnectOptions, PgPoolOptions},
-    PgPool,
-};
+use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use std::{str::FromStr, sync::Arc, time::Duration};
 use tracing::{error, info};
-use tracing_subscriber::{prelude::*, reload, EnvFilter, Registry};
+use tracing_subscriber::{prelude::*, reload, EnvFilter};
 
-use fpl_bot::commands::*;
 use fpl_bot::Context;
 use fpl_bot::Data;
 use fpl_bot::Error;
@@ -147,7 +143,13 @@ async fn main() -> Result<(), Box<(dyn std::error::Error + std::marker::Send + S
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
 
                 // Live notifs
-                let notification_channel = ChannelId::new(1074708855063330876);
+                let notification_channel = ChannelId::new(
+                    // TODO: Actually set up notifications correctly
+                    std::env::var("NOTIFICATION_CHANNEL")
+                        .unwrap()
+                        .parse::<u64>()
+                        .unwrap(),
+                );
 
                 let live_points_notifications = Arc::new(Points::new(
                     Arc::clone(&pool),

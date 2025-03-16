@@ -21,3 +21,7 @@ dotenv = "0.15.0"
 tracing = "0.1.41"
 governor = "0.8.0"
 async-trait = "0.1.85"
+
+
+[patch.crates-io]
+bytes = { git = "https://github.com/tokio-rs/bytes.git", tag = "v1.9.0" }
