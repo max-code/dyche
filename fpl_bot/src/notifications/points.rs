@@ -88,7 +88,12 @@ impl Points {
     }
 
     pub async fn poll(&self) -> Result<(), Error> {
-        info!("Polling live points");
+        info!(
+            "Polling live points. Game Week = [{:?}], ChannelID=[{}], Tracked Player Count = [{}]",
+            self.current_game_week.lock().unwrap(),
+            self.notification_channel,
+            self.player_points.lock().unwrap().len()
+        );
 
         // Check for GW change. Extra scope so the mutex guard on stored_gw is dropped.
         {
