@@ -1,6 +1,6 @@
 use svg::node::element::{Group, Rectangle};
 
-use crate::images::colours::{GREEN_COLOUR, GREY_COLOUR, WHITE_COLOUR};
+use crate::images::colours::{GREY_COLOUR, WHITE_COLOUR};
 
 use super::super::constants::colours::PURPLE_COLOUR;
 use super::{CenteredTextBox, CornerRounding};
@@ -38,6 +38,7 @@ pub struct PlayerInfo {
     pub games: Vec<PlayerGameInfo>,
     pub captain: bool,
     pub vice_captain: bool,
+    pub has_fixture: bool,
 
     // Style properties
     border_color: String,
@@ -46,6 +47,7 @@ pub struct PlayerInfo {
     status_active_bg_color: String,
     status_inactive_bg_color: String,
     status_text_color: String,
+    opacity: f64,
 }
 
 impl PlayerInfo {
@@ -55,6 +57,7 @@ impl PlayerInfo {
         games: Vec<PlayerGameInfo>,
         captain: bool,
         vice_captain: bool,
+        has_fixture: bool,
     ) -> Self {
         Self {
             name,
@@ -62,12 +65,14 @@ impl PlayerInfo {
             games,
             captain,
             vice_captain,
-            border_color: GREEN_COLOUR.to_string(),
+            has_fixture,
+            border_color: PURPLE_COLOUR.to_string(),
             name_bg_color: WHITE_COLOUR.to_string(),
             name_text_color: PURPLE_COLOUR.to_string(),
             status_active_bg_color: PURPLE_COLOUR.to_string(),
             status_inactive_bg_color: GREY_COLOUR.to_string(),
             status_text_color: WHITE_COLOUR.to_string(),
+            opacity: 1.0,
         }
     }
 
@@ -102,6 +107,11 @@ impl PlayerInfo {
         self
     }
 
+    pub fn card_opactiy(&mut self, opacity: impl Into<f64>) -> &mut Self {
+        self.opacity = opacity.into();
+        self
+    }
+
     pub fn to_card_svg(
         &self,
         x: u32,
@@ -114,7 +124,11 @@ impl PlayerInfo {
         let border_radius = 8;
         let stroke_width: f64 = 2.0;
 
-        let group = Group::new();
+        let mut group = Group::new();
+
+        if !self.has_fixture {
+            group = group.set("opacity", self.opacity);
+        }
 
         // Semi-transparent border with more visible border
         let background = Rectangle::new()
@@ -129,10 +143,7 @@ impl PlayerInfo {
             .set("stroke-width", stroke_width);
 
         // Player image
-        let image_path = format!(
-            "/Users/maxjordan/code/dyche/fpl_assets/player_images/{}.png",
-            self.code
-        );
+        let image_path = fpl_common::paths::get_player_image_path(self.code);
         let image = svg::node::element::Image::new()
             .set("x", x + 5)
             .set("y", y + 5)

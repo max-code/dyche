@@ -75,7 +75,7 @@ impl Points {
         info!("Starting live points tracking & notifications");
         // start the polling thread here
         tokio::spawn(async move {
-            let mut interval = tokio::time::interval(Duration::from_secs(2));
+            let mut interval = tokio::time::interval(Duration::from_secs(10));
 
             loop {
                 interval.tick().await;
@@ -219,10 +219,7 @@ impl Points {
                 notification.owners_to_str()
             );
 
-            let image_path = format!(
-                "/Users/maxjordan/code/dyche/fpl_assets/player_images/{}.png",
-                notification.code
-            );
+            let image_path = fpl_common::paths::get_player_image_path(notification.code);
 
             let image_attachment = serenity::builder::CreateAttachment::path(image_path).await?;
             let image_filename = image_attachment.filename.clone();

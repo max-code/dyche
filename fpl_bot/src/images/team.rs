@@ -329,9 +329,15 @@ impl TeamRenderer {
                 y_offset += self.player_card_vertical_padding;
             }
 
-            for (x_offset, player) in xs.iter().zip(row.iter()) {
-                let player_card = player.to_card_svg(
-                    *x_offset,
+            for (x_offset, player) in xs.into_iter().zip(row.iter()) {
+                let opacity = match player.has_fixture {
+                    true => 1.0,
+                    false => 0.4,
+                };
+                // TODO: Rethink this clone
+                let mut player_clone = player.clone();
+                let player_card = player_clone.card_opactiy(opacity).to_card_svg(
+                    x_offset,
                     y_offset,
                     self.player_card_width,
                     self.player_card_height,
@@ -577,10 +583,9 @@ impl TeamRenderer {
             let row_y: f64 = y_offset + (self.transfer_row_height as f64 / 2.0);
 
             for transfer in transfer_chunk {
-                let out_image_path = format!(
-                    "/Users/maxjordan/code/dyche/fpl_assets/player_images/{}.png",
-                    transfer.player_out_code
-                );
+                let out_image_path =
+                    fpl_common::paths::get_player_image_path(transfer.player_out_code);
+
                 let out_image = svg::node::element::Image::new()
                     .set("x", row_x)
                     .set("y", row_y)
@@ -628,10 +633,8 @@ impl TeamRenderer {
                     .build()?;
 
                 row_x += transfer_text_width;
-                let in_image_path = format!(
-                    "/Users/maxjordan/code/dyche/fpl_assets/player_images/{}.png",
-                    transfer.player_in_code
-                );
+                let in_image_path =
+                    fpl_common::paths::get_player_image_path(transfer.player_in_code);
                 let in_image = svg::node::element::Image::new()
                     .set("x", row_x)
                     .set("y", row_y)

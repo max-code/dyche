@@ -169,14 +169,16 @@ async fn get_player_data(
             SELECT
                 ph.player_id,
                 ph.fixture_id,
-                ph.was_home AS is_home
+                ph.was_home AS is_home,
+                f.game_week_id
             FROM player_history ph
             JOIN fixtures f ON ph.fixture_id = f.id AND f.started = true
             UNION ALL
             SELECT
                 pf.player_id,
                 pf.fixture_id,
-                pf.is_home
+                pf.is_home,
+                f.game_week_id
             FROM player_fixtures pf
             JOIN fixtures f ON pf.fixture_id = f.id AND f.started = false
         )
@@ -192,18 +194,19 @@ async fn get_player_data(
             tgwp.multiplier as multiplier,
             tgwp.position as "position!",
             tgwp.element_type as player_position,
-            f.started as "started!",
+            COALESCE(f.started, false) as "started!",
             gwp.minutes as minutes,
             tgwp.player_id as player_id,
-            c.short_name as short_name,
-            cpf.is_home as "is_home!"
+            coalesce(c.short_name, 'N/A') as "short_name!",
+            COALESCE(cpf.is_home, false) as "is_home!",
+            CASE WHEN cpf.player_id IS NULL THEN false ELSE true END as "has_fixture!"
         FROM team_game_week_picks tgwp
         JOIN discord_users du ON du.team_id = tgwp.team_id
         JOIN game_week_players gwp ON tgwp.player_id = gwp.player_id AND gwp.game_week_id = tgwp.game_week_id
         JOIN players p ON gwp.player_id = p.id
-        JOIN combined_player_fixtures cpf ON cpf.player_id = tgwp.player_id
-        JOIN fixtures f ON f.id = cpf.fixture_id AND f.game_week_id = tgwp.game_week_id
-        JOIN clubs c ON c.id = CASE WHEN cpf.is_home THEN f.home_team_id ELSE f.away_team_id END
+        LEFT JOIN combined_player_fixtures cpf ON cpf.player_id = tgwp.player_id AND cpf.game_week_id = tgwp.game_week_id
+        LEFT JOIN fixtures f ON f.id = cpf.fixture_id
+        LEFT JOIN clubs c ON c.id = CASE WHEN cpf.is_home THEN f.home_team_id ELSE f.away_team_id END
         LEFT JOIN bonus_with_calculated bwc ON f.id = bwc.fixture_id AND p.id = bwc.player_id
         WHERE du.discord_id = $1 AND tgwp.game_week_id = $2;
         "#,
@@ -216,7 +219,9 @@ async fn get_player_data(
     let mut player_games: HashMap<i16, Vec<PlayerGameInfo>> = HashMap::new();
 
     for result in &results {
-        let player_game_info = if result.started {
+        let player_game_info = if !result.has_fixture {
+            PlayerGameInfo::FreeText("-".to_string())
+        } else if result.started {
             if result.minutes == 0 && result.position != 16 {
                 PlayerGameInfo::Status(GameStatus::NotPlayed)
             } else {
@@ -275,6 +280,7 @@ async fn get_player_data(
             game_info.clone(),
             result.captain,
             result.vice_captain,
+            result.has_fixture,
         );
 
         match result.position {

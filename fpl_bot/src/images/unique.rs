@@ -42,7 +42,7 @@ impl UniquePlayers {
         };
 
         self.players.push(
-            PlayerInfo::new(name, code, games, is_captain, is_vice_captain)
+            PlayerInfo::new(name, code, games, is_captain, is_vice_captain, true)
                 .status_active_bg_color(bg_colour),
         );
 

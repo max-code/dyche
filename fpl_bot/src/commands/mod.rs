@@ -33,8 +33,5 @@ pub fn get_image_file_path(command: &str, ctx: &Context<'_>) -> String {
         None => 0,
     };
 
-    format!(
-        "/Users/maxjordan/code/dyche/fpl_bot/generated/{}_{}_{}.png",
-        command, user_id, server_id
-    )
+    fpl_common::paths::get_generated_image_path(command, user_id, server_id)
 }

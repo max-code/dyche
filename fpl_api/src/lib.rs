@@ -267,7 +267,7 @@ mod tests {
         // Act
         let request = PlayerPhotoRequest::new(
             166989,
-            "/Users/maxjordan/code/dyche/fpl_bot/static/test_photo.png",
+            fpl_common::paths::get_static_image_path("test_photo.png"),
         );
         let response = client.get(request).await.unwrap();
 

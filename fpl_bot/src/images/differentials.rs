@@ -65,6 +65,7 @@ impl Differentials {
                 games,
                 is_captain,
                 is_vice_captain,
+                true,
             ));
 
         self

@@ -38,10 +38,7 @@ impl PlayerPhotosScraper {
         client
             .get(PlayerPhotoRequest::new(
                 player_code,
-                format!(
-                    "/Users/maxjordan/code/dyche/fpl_assets/player_images/{}.png",
-                    player_code
-                ),
+                fpl_common::paths::get_player_image_path(player_code),
             ))
             .await
             .map_err(ScraperError::FplApiError)

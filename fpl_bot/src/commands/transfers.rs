@@ -187,6 +187,7 @@ async fn get_transfers(
             vec![PlayerGameInfo::FreeText(player_in_text)],
             false,
             false,
+            true,
         )
         .status_active_bg_color(player_in_bg_colour);
 
@@ -207,6 +208,7 @@ async fn get_transfers(
             vec![PlayerGameInfo::FreeText(player_out_text)],
             false,
             false,
+            true,
         )
         .status_active_bg_color(player_out_bg_colour);
 
