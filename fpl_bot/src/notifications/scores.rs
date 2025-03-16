@@ -1,6 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
-    sync::{Arc, Mutex},
+    sync::{atomic::AtomicBool, Arc, Mutex},
     time::Duration,
 };
 
@@ -25,6 +25,7 @@ pub struct ScoreNotifications {
     pool: Arc<PgPool>,
     http: Arc<Http>,
     notification_channel: ChannelId,
+    first_run: AtomicBool,
 }
 
 pub struct ScoreNotification {
@@ -56,6 +57,7 @@ impl ScoreNotifications {
             http,
             notification_channel,
             scores: Mutex::new(HashMap::new()),
+            first_run: AtomicBool::new(true),
         }
     }
 
@@ -107,6 +109,10 @@ impl ScoreNotifications {
             return Ok(());
         }
 
+        let is_first_run = self
+            .first_run
+            .swap(false, std::sync::atomic::Ordering::SeqCst);
+
         let notifications = {
             let mut notifications_vec: Vec<ScoreNotification> = Vec::new();
             let mut stored_scores = self.scores.lock().unwrap();
@@ -116,19 +122,17 @@ impl ScoreNotifications {
                 live_fixture_ids.insert(fixture.id);
                 match stored_scores.get(&fixture.id) {
                     None => {
-                        notifications_vec.push(ScoreNotification {
-                            home_team: fixture.home_team_name,
-                            away_team: fixture.away_team_name,
-                            home_team_score: fixture.home_team_score,
-                            home_team_score_changed: false,
-                            away_team_score: fixture.away_team_score,
-                            away_team_score_changed: false,
-                            new_fixture: true,
-                        });
-                        stored_scores.insert(
-                            fixture.id,
-                            (fixture.home_team_score, fixture.away_team_score),
-                        );
+                        if !is_first_run {
+                            notifications_vec.push(ScoreNotification {
+                                home_team: fixture.home_team_name,
+                                away_team: fixture.away_team_name,
+                                home_team_score: fixture.home_team_score,
+                                home_team_score_changed: false,
+                                away_team_score: fixture.away_team_score,
+                                away_team_score_changed: false,
+                                new_fixture: true,
+                            });
+                        }
                     }
                     Some((stored_home_team_score, stored_away_team_score)) => {
                         if stored_home_team_score != &fixture.home_team_score
@@ -151,10 +155,13 @@ impl ScoreNotifications {
                         }
                     }
                 };
+                stored_scores.insert(
+                    fixture.id,
+                    (fixture.home_team_score, fixture.away_team_score),
+                );
             }
 
             stored_scores.retain(|k, _v| live_fixture_ids.contains(k));
-
             notifications_vec
         };
 
