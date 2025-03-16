@@ -1,7 +1,12 @@
 use std::{collections::HashMap, str::FromStr, time::Instant};
 
-use crate::images::{
-    GameStatus, PlayerGameInfo, PlayerInfo, TeamData, TeamDataBuilder, TeamRenderer, TransferInfo,
+use crate::{
+    handle_async_fallible,
+    images::{
+        GameStatus, PlayerGameInfo, PlayerInfo, TeamData, TeamDataBuilder, TeamRenderer,
+        TransferInfo,
+    },
+    render,
 };
 use fpl_common::types::{Chip, GameWeekId, PlayerPosition};
 use fpl_db::queries::{game_week::get_current_game_week, team::get_team_name_from_discord_id};
@@ -34,7 +39,15 @@ pub async fn team(
 
     let game_week_id: i16 = match game_week {
         Some(gw) => i16::from(gw),
-        None => i16::from(get_current_game_week(&ctx.data().pool).await?.id),
+        None => {
+            let current_gw = handle_async_fallible!(
+                ctx,
+                embed,
+                get_current_game_week(&ctx.data().pool),
+                "Error calling get_current_game_week"
+            );
+            i16::from(current_gw.id)
+        }
     };
 
     let user_id = match user {
@@ -42,14 +55,31 @@ pub async fn team(
         None => i64::from(ctx.author().id),
     };
 
-    let data: TeamData = get_team_data(ctx, user_id, game_week_id, &timer).await?;
+    let data: TeamData = handle_async_fallible!(
+        ctx,
+        embed,
+        get_team_data(ctx, user_id, game_week_id, &timer),
+        "Error calling get_team_data"
+    );
     let file_name = get_image_file_path(COMMAND, &ctx);
 
-    let team_name = get_team_name_from_discord_id(&ctx.data().pool, user_id).await?;
+    let team_name = handle_async_fallible!(
+        ctx,
+        embed,
+        get_team_name_from_discord_id(&ctx.data().pool, user_id),
+        "Error calling get_team_name_from_discord_id"
+    );
     log_timer!(timer, COMMAND, ctx, "fetched team_name");
 
     let renderer = TeamRenderer::default();
-    renderer.render(data, &file_name).await?;
+    render!(
+        ctx,
+        embed,
+        renderer,
+        data,
+        &file_name,
+        "Failed to render team"
+    );
     log_timer!(timer, COMMAND, ctx, "rendered image");
 
     embed

@@ -20,7 +20,7 @@ pub async fn deadline(
     log_call!(COMMAND, ctx, "game_week_id", game_week_id);
     let timer = start_timer!();
 
-    let game_week_deadlines = sqlx::query!(
+    let game_week_deadlines = match sqlx::query!(
         r#"
         SELECT
             name, deadline_time
@@ -34,7 +34,18 @@ pub async fn deadline(
         rows.into_iter()
             .map(|row| (row.name, row.deadline_time))
             .collect::<Vec<(String, DateTime<Utc>)>>()
-    })?;
+    }) {
+        Ok(values) => values,
+        Err(e) => {
+            Embed::from_ctx(ctx)?
+                .error()
+                .body(format!("Error when calling {}", COMMAND))
+                .send()
+                .await?;
+
+            return Err(e.into());
+        }
+    };
     log_timer!(timer, COMMAND, ctx, "fetched deadlines");
 
     let mut deadline_rows = game_week_deadlines

@@ -5,8 +5,8 @@ use std::time::Instant;
 use crate::autocompletes::{autocomplete_league_or_user, autocomplete_league_or_user_value};
 use crate::utils::common::{check_discord_user_registered, get_not_registered_title_and_message};
 use crate::utils::embed::Embed;
+use crate::{handle_async_fallible, log_call, log_timer, handle_parse_value, start_timer};
 use crate::{Context, Error};
-use crate::{start_timer, log_timer, log_call};
 
 use fpl_common::types::{Chip, LeagueId, TeamId};
 use fpl_db::queries::mini_league::get_league_name;
@@ -15,7 +15,7 @@ use tracing::{debug, info};
 
 const COMMAND: &str = "/chips";
 
-#[poise::command(slash_command, user_cooldown=1)]
+#[poise::command(slash_command, user_cooldown = 1)]
 pub async fn chips(
     ctx: Context<'_>,
     #[description = "Chips for a single user or entire league."]
@@ -25,19 +25,26 @@ pub async fn chips(
     #[autocomplete = "autocomplete_league_or_user_value"]
     league_or_user_value: String,
 ) -> Result<(), Error> {
-    log_call!(COMMAND, ctx, "league_or_user", league_or_user, "league_or_user_value", league_or_user_value);
+    log_call!(
+        COMMAND,
+        ctx,
+        "league_or_user",
+        league_or_user,
+        "league_or_user_value",
+        league_or_user_value
+    );
     let timer = start_timer!();
 
-    let value: i64 = league_or_user_value.parse::<i64>()?;
+    let value: i64 = handle_parse_value!(ctx, league_or_user_value, i64, "Bad User/League value provided.");
 
     let rows = match league_or_user.as_str() {
-        "User" => match check_discord_user_registered(&ctx.data().pool, value).await? {
-            true => {
-            let user_chips = get_user_chips(ctx, value).await?;
-            log_timer!(timer, COMMAND, ctx, "got user chips");
-            user_chips
+        "User" => match check_discord_user_registered(&ctx.data().pool, value).await {
+            Ok(true) => {
+                let user_chips = handle_async_fallible!(ctx, get_user_chips(ctx, value), "Error calling get_user_chips");
+                log_timer!(timer, COMMAND, ctx, "got user chips");
+                user_chips
             }
-            false => {
+            Ok(false) => {
                 let (title, message) = get_not_registered_title_and_message(value);
                 Embed::from_ctx(ctx)?
                     .error()
@@ -47,12 +54,24 @@ pub async fn chips(
                     .await?;
                 return Ok(());
             }
+            Err(e) => {
+                Embed::from_ctx(ctx)?
+                    .error()
+                    .body(format!("Error when calling {}", COMMAND))
+                    .send()
+                    .await?;
+                return Err(format!(
+                    "Unknown error when calling check_discord_user_registered: {}",
+                    e
+                )
+                .into());
+            }
         },
         "League" => {
-            let league_chips = get_league_chips(ctx, LeagueId::new(value as i32)).await?;
+            let league_chips = handle_async_fallible!(ctx, get_league_chips(ctx, LeagueId::new(value as i32)), "Error calling get_league_chips");
             log_timer!(timer, COMMAND, ctx, "got league chips");
             league_chips
-        },
+        }
         _ => {
             return Err("Unknown league_or_user_type".into());
         }
@@ -60,16 +79,15 @@ pub async fn chips(
 
     let league_or_user_string = match league_or_user.as_str() {
         "User" => {
-            let team_name = get_team_name_from_discord_id(&ctx.data().pool, value).await?;
+            let team_name = handle_async_fallible!(ctx, get_team_name_from_discord_id(&ctx.data().pool, value), "Error calling get_team_name_from_discord_id");
             log_timer!(timer, COMMAND, ctx, "fetched team_name");
             team_name
-
-        },
+        }
         "League" => {
-            let league_name = get_league_name(&ctx.data().pool, LeagueId::new(value as i32)).await?;
+            let league_name = handle_async_fallible!(ctx, get_league_name(&ctx.data().pool, LeagueId::new(value as i32)), "Error calling get_league_name");
             log_timer!(timer, COMMAND, ctx, "fetched league_name");
             league_name
-        },
+        }
         _ => {
             return Err("Unknown league_or_user_type".into());
         }
@@ -83,7 +101,6 @@ pub async fn chips(
         .await?;
 
     Ok(())
-
 }
 
 pub async fn get_league_chips(ctx: Context<'_>, league_id: LeagueId) -> Result<Vec<String>, Error> {

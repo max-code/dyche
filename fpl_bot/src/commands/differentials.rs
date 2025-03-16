@@ -1,6 +1,9 @@
 use std::time::Instant;
 
-use crate::images::{DifferentialKey, Differentials, DifferentialsRenderer};
+use crate::{
+    handle_async_fallible, handle_parse_value,
+    images::{DifferentialKey, Differentials, DifferentialsRenderer},
+};
 use fpl_common::types::{GameWeekId, LeagueId};
 use fpl_db::queries::{
     game_week::get_current_game_week,
@@ -53,18 +56,32 @@ pub async fn differentials(
         None => i16::from(get_current_game_week(&ctx.data().pool).await?.id),
     };
 
-    let value: i64 = league_or_user_value.parse::<i64>()?;
+    let value: i64 = handle_parse_value!(
+        ctx,
+        league_or_user_value,
+        i64,
+        "Bad User/League value provided."
+    );
 
     let team_ids = match league_or_user.as_str() {
         "User" => {
             let ids = vec![value, ctx.author().id.get() as i64];
-            let team_ids = get_team_ids_from_discord_ids(&ctx.data().pool, &ids).await?;
+            let team_ids = handle_async_fallible!(
+                ctx,
+                embed,
+                get_team_ids_from_discord_ids(&ctx.data().pool, &ids),
+                "Error calling get_team_ids_from_discord_ids"
+            );
             log_timer!(timer, COMMAND, ctx, "got team_ids from discord_ids");
             team_ids
         }
         "League" => {
-            let team_ids =
-                get_team_ids_from_league_id(&ctx.data().pool, LeagueId::new(value as i32)).await?;
+            let team_ids = handle_async_fallible!(
+                ctx,
+                embed,
+                get_team_ids_from_league_id(&ctx.data().pool, LeagueId::new(value as i32)),
+                "Error calling get_team_ids_from_league_id"
+            );
             log_timer!(timer, COMMAND, ctx, "got team_ids for ml");
             team_ids
         }
@@ -75,16 +92,30 @@ pub async fn differentials(
 
     let user_or_league_name = match league_or_user.as_str() {
         "User" => {
-            let caller_name = get_team_name_from_discord_id(&ctx.data().pool, value).await?;
-            let other_user_name =
-                get_team_name_from_discord_id(&ctx.data().pool, ctx.author().id.get() as i64)
-                    .await?;
+            let caller_name = handle_async_fallible!(
+                ctx,
+                embed,
+                get_team_name_from_discord_id(&ctx.data().pool, value),
+                "Error calling get_team_name_from_discord_id"
+            );
+
+            let other_user_name = handle_async_fallible!(
+                ctx,
+                embed,
+                get_team_name_from_discord_id(&ctx.data().pool, ctx.author().id.get() as i64),
+                "Error calling get_team_name_from_discord_id"
+            );
+
             log_timer!(timer, COMMAND, ctx, "got team names from discord_ids");
             format!("{caller_name} and {other_user_name}")
         }
         "League" => {
-            let league_name =
-                get_league_name(&ctx.data().pool, LeagueId::new(value as i32)).await?;
+            let league_name = handle_async_fallible!(
+                ctx,
+                embed,
+                get_league_name(&ctx.data().pool, LeagueId::new(value as i32)),
+                "Error calling get_league_name"
+            );
             log_timer!(timer, COMMAND, ctx, "got league name for ml");
             league_name
         }
@@ -93,7 +124,12 @@ pub async fn differentials(
         }
     };
 
-    let differentials = get_differentials_for_user_ids(ctx, team_ids, game_week_id).await?;
+    let differentials = handle_async_fallible!(
+        ctx,
+        embed,
+        get_differentials_for_user_ids(ctx, team_ids, game_week_id),
+        "Error calling get_league_name"
+    );
 
     let file_name = get_image_file_path(COMMAND, &ctx);
     let renderer = DifferentialsRenderer::default();

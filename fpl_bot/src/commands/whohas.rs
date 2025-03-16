@@ -2,7 +2,7 @@ use crate::autocompletes::{
     autocomplete_mini_league, autocomplete_player_or_club, autocomplete_player_or_club_value,
 };
 use crate::utils::embed::Embed;
-use crate::{Context, Error};
+use crate::{handle_async_fallible, handle_parse_value, Context, Error};
 use fpl_db::models::GameWeek;
 use fpl_db::queries::mini_league::get_league_name;
 use std::collections::{BTreeMap, HashMap};
@@ -43,7 +43,12 @@ pub async fn whohas(
     let current_game_week: fpl_db::models::GameWeek =
         get_current_game_week(&ctx.data().pool).await?;
 
-    let value = player_or_club_value.parse::<i16>()?;
+    let value: i16 = handle_parse_value!(
+        ctx,
+        player_or_club_value,
+        i16,
+        "Bad Player/Club value provided."
+    );
 
     let rows = match player_or_club.as_str() {
         "Player" => {
@@ -59,14 +64,24 @@ pub async fn whohas(
             whohas_player
         }
         "Club" => {
-            let whohas_club = get_whohas_club(
+            let club_id = match ClubId::try_from(value) {
+                Ok(v) => v,
+                Err(e) => {
+                    Embed::from_ctx(ctx)?
+                        .error()
+                        .body("Bad Club value provided")
+                        .send()
+                        .await?;
+
+                    return Err(e.into());
+                }
+            };
+
+            let whohas_club = handle_async_fallible!(
                 ctx,
-                &timer,
-                current_game_week,
-                ClubId::try_from(value)?,
-                league_id,
-            )
-            .await?;
+                get_whohas_club(ctx, &timer, current_game_week, club_id, league_id),
+                "Error calling get_whohas_club"
+            );
             log_timer!(timer, COMMAND, ctx, "got whohas club");
             whohas_club
         }
@@ -75,7 +90,11 @@ pub async fn whohas(
         }
     };
 
-    let league_name = get_league_name(&ctx.data().pool, league_id).await?;
+    let league_name = handle_async_fallible!(
+        ctx,
+        get_league_name(&ctx.data().pool, league_id),
+        "Error calling get_league_name"
+    );
     log_timer!(timer, COMMAND, ctx, "fetched league_name");
 
     Embed::from_ctx(ctx)?

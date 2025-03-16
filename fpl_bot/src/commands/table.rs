@@ -2,7 +2,7 @@ use crate::autocompletes::{autocomplete_mini_league, autocomplete_overall_or_wee
 use crate::commands::get_image_file_path;
 use crate::images::{TableData, TableRenderer};
 use crate::utils::embed::{Embed, EmbedPage};
-use crate::{log_call, log_timer, start_timer, Context, Error};
+use crate::{handle_async_fallible, log_call, log_timer, render, start_timer, Context, Error};
 use fpl_db::queries::mini_league::get_league_name;
 use sqlx::FromRow;
 use std::cmp::Reverse;
@@ -51,7 +51,13 @@ pub async fn table(
         .send()
         .await?;
 
-    let mut live_points = get_points(&ctx, league_id).await?;
+    let mut live_points = handle_async_fallible!(
+        ctx,
+        embed,
+        get_points(&ctx, league_id),
+        "Error calling get_points"
+    );
+
     live_points.sort_by_key(|lp| {
         Reverse(match overall_or_week.as_str() {
             "Overall" => lp.calculated_overall_points,
@@ -61,7 +67,12 @@ pub async fn table(
     });
     log_timer!(timer, COMMAND, ctx, "fetched live points");
 
-    let league_name = get_league_name(&ctx.data().pool, league_id).await?;
+    let league_name = handle_async_fallible!(
+        ctx,
+        embed,
+        get_league_name(&ctx.data().pool, league_id),
+        "Error calling get_get_league_namepoints"
+    );
     log_timer!(timer, COMMAND, ctx, "fetched league_name");
 
     let title = format!("{} League Standings", overall_or_week);
@@ -95,8 +106,15 @@ pub async fn table(
     }
 
     let file_name = get_image_file_path(COMMAND, &ctx);
-    let renderer = TableRenderer::default();
-    renderer.render(data, &file_name).await?;
+    let renderer: TableRenderer = TableRenderer::default();
+    render!(
+        ctx,
+        embed,
+        renderer,
+        data,
+        &file_name,
+        "Failed to render table"
+    );
     log_timer!(timer, COMMAND, ctx, "rendered image");
 
     embed

@@ -1,6 +1,10 @@
 use std::time::Instant;
 
-use crate::images::{UniquePlayers, UniqueRenderer};
+use crate::{
+    handle_async_fallible,
+    images::{UniquePlayers, UniqueRenderer},
+    render,
+};
 use fpl_common::types::{GameWeekId, LeagueId};
 use fpl_db::queries::{
     game_week::get_current_game_week, mini_league::get_league_name,
@@ -39,26 +43,54 @@ pub async fn unique(
 
     let game_week_id: i16 = match game_week {
         Some(gw) => i16::from(gw),
-        None => i16::from(get_current_game_week(&ctx.data().pool).await?.id),
+        None => {
+            let current_gw = handle_async_fallible!(
+                ctx,
+                embed,
+                get_current_game_week(&ctx.data().pool),
+                "Error calling get_current_game_week"
+            );
+            i16::from(current_gw.id)
+        }
     };
-
     let user_id = match user {
         Some(u) => i64::from(u.id),
         None => i64::from(ctx.author().id),
     };
 
-    let unique_players =
-        get_unique_player_names_for_team_in_league(ctx, league_id, user_id, game_week_id).await?;
+    let unique_players = handle_async_fallible!(
+        ctx,
+        embed,
+        get_unique_player_names_for_team_in_league(ctx, league_id, user_id, game_week_id),
+        "Error calling get_unique_player_names_for_team_in_league"
+    );
 
-    let team_name = get_team_name_from_discord_id(&ctx.data().pool, user_id).await?;
+    let team_name = handle_async_fallible!(
+        ctx,
+        embed,
+        get_team_name_from_discord_id(&ctx.data().pool, user_id),
+        "Error calling get_team_name_from_discord_id"
+    );
     log_timer!(timer, COMMAND, ctx, "fetched team_name");
 
-    let league_name = get_league_name(&ctx.data().pool, league_id).await?;
+    let league_name = handle_async_fallible!(
+        ctx,
+        embed,
+        get_league_name(&ctx.data().pool, league_id),
+        "Error calling get_league_name"
+    );
     log_timer!(timer, COMMAND, ctx, "fetched league_name");
 
     let file_name = get_image_file_path(COMMAND, &ctx);
     let renderer = UniqueRenderer::default();
-    renderer.render(unique_players, &file_name).await?;
+    render!(
+        ctx,
+        embed,
+        renderer,
+        unique_players,
+        &file_name,
+        "Failed to render unique players"
+    );
     log_timer!(timer, COMMAND, ctx, "rendered image");
 
     embed

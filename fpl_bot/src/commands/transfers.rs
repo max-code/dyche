@@ -1,9 +1,12 @@
 use std::time::Instant;
 
+use crate::handle_async_fallible;
+use crate::handle_parse_value;
 use crate::images::colours::GREY_COLOUR;
 use crate::images::colours::PURPLE_COLOUR;
 use crate::images::TransfersRenderer;
 use crate::images::{PlayerGameInfo, PlayerInfo};
+use crate::render;
 use fpl_common::types::{GameWeekId, LeagueId};
 use fpl_db::queries::{
     game_week::get_current_game_week,
@@ -54,21 +57,43 @@ pub async fn transfers(
 
     let game_week_id: i16 = match game_week {
         Some(gw) => i16::from(gw),
-        None => i16::from(get_current_game_week(&ctx.data().pool).await?.id),
+        None => {
+            let current_gw = handle_async_fallible!(
+                ctx,
+                embed,
+                get_current_game_week(&ctx.data().pool),
+                "Error calling get_current_game_week"
+            );
+            i16::from(current_gw.id)
+        }
     };
 
-    let value: i64 = league_or_user_value.parse::<i64>()?;
-
+    let value: i64 = handle_parse_value!(
+        ctx,
+        league_or_user_value,
+        i64,
+        "Bad User/League value provided."
+    );
     let team_ids = match league_or_user.as_str() {
         "User" => {
             let ids = vec![value];
-            let team_ids = get_team_ids_from_discord_ids(&ctx.data().pool, &ids).await?;
+            let team_ids = handle_async_fallible!(
+                ctx,
+                embed,
+                get_team_ids_from_discord_ids(&ctx.data().pool, &ids),
+                "Error calling get_team_ids_from_discord_ids"
+            );
+
             log_timer!(timer, COMMAND, ctx, "got team_ids from discord_ids");
             team_ids
         }
         "League" => {
-            let team_ids =
-                get_team_ids_from_league_id(&ctx.data().pool, LeagueId::new(value as i32)).await?;
+            let team_ids = handle_async_fallible!(
+                ctx,
+                embed,
+                get_team_ids_from_league_id(&ctx.data().pool, LeagueId::new(value as i32)),
+                "Error calling get_team_ids_from_league_id"
+            );
             log_timer!(timer, COMMAND, ctx, "got team_ids for ml");
             team_ids
         }
@@ -77,27 +102,40 @@ pub async fn transfers(
         }
     };
 
-    let transfers = get_transfers(ctx, &team_ids, game_week_id).await?;
+    let transfers = handle_async_fallible!(
+        ctx,
+        embed,
+        get_transfers(ctx, &team_ids, game_week_id),
+        "Error calling get_transfers"
+    );
 
-    let user_or_league_name = match league_or_user.as_str() {
+    let league_or_user_string = match league_or_user.as_str() {
         "User" => {
-            let caller_name = get_team_name_from_discord_id(&ctx.data().pool, value).await?;
-            log_timer!(timer, COMMAND, ctx, "got team names from discord_ids");
-            caller_name
+            let team_name = handle_async_fallible!(
+                ctx,
+                get_team_name_from_discord_id(&ctx.data().pool, value),
+                "Error calling get_team_name_from_discord_id"
+            );
+            log_timer!(timer, COMMAND, ctx, "fetched team_name");
+            team_name
         }
         "League" => {
-            let league_name =
-                get_league_name(&ctx.data().pool, LeagueId::new(value as i32)).await?;
-            log_timer!(timer, COMMAND, ctx, "got league name for ml");
+            let league_name = handle_async_fallible!(
+                ctx,
+                get_league_name(&ctx.data().pool, LeagueId::new(value as i32)),
+                "Error calling get_league_name"
+            );
+            log_timer!(timer, COMMAND, ctx, "fetched league_name");
             league_name
         }
         _ => {
             return Err("Unknown league_or_user_type".into());
         }
     };
+
     let title = format!(
         "Transfers for {} in GW{}",
-        user_or_league_name, game_week_id
+        league_or_user_string, game_week_id
     );
 
     if transfers.user_to_transfers.is_empty() {
@@ -112,7 +150,14 @@ pub async fn transfers(
 
     let file_name = get_image_file_path(COMMAND, &ctx);
     let renderer = TransfersRenderer::default();
-    renderer.render(transfers, &file_name).await?;
+    render!(
+        ctx,
+        embed,
+        renderer,
+        transfers,
+        &file_name,
+        "Failed to render transfers"
+    );
     log_timer!(timer, COMMAND, ctx, "rendered transfers image");
 
     embed
