@@ -53,7 +53,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     manager.register_scraper(game_state_scraper);
 
     // Second
-    let fixtures_scraper = FixturesScraper::new(Arc::clone(&pool), Arc::clone(&client), one_minute);
+    let fixtures_scraper =
+        FixturesScraper::new(Arc::clone(&pool), Arc::clone(&client), fifteen_seconds);
     manager.register_scraper(fixtures_scraper);
 
     let teams_scraper = TeamsScraper::new(Arc::clone(&pool), Arc::clone(&client), five_minutes);
