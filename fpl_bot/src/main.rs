@@ -12,7 +12,8 @@ use commands::{
 
 use ::serenity::all::ChannelId;
 use fpl_api::FplClient;
-use fpl_bot::notifications::Points;
+use fpl_bot::notifications::PointsNotifications;
+use fpl_bot::notifications::ScoreNotifications;
 use poise::serenity_prelude as serenity;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use std::{str::FromStr, sync::Arc, time::Duration};
@@ -151,13 +152,21 @@ async fn main() -> Result<(), Box<(dyn std::error::Error + std::marker::Send + S
                         .unwrap(),
                 );
 
-                let live_points_notifications = Arc::new(Points::new(
+                let live_points_notifications = Arc::new(PointsNotifications::new(
                     Arc::clone(&pool),
                     Arc::clone(&ctx.http),
                     notification_channel,
                 ));
 
                 live_points_notifications.start().await?;
+
+                let live_score_notifications = Arc::new(ScoreNotifications::new(
+                    Arc::clone(&pool),
+                    Arc::clone(&ctx.http),
+                    notification_channel,
+                ));
+
+                live_score_notifications.start().await?;
 
                 Ok(Data {
                     pool,

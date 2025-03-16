@@ -1,4 +1,4 @@
-use fpl_common::types::GameWeekId;
+use fpl_common::types::{ClubId, FixtureId, GameWeekId};
 use sqlx::PgPool;
 use tracing::debug;
 

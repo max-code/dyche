@@ -23,7 +23,7 @@ pub struct LiveOwners {
     pub owners: Vec<i64>,
 }
 
-pub struct Points {
+pub struct PointsNotifications {
     player_points: Mutex<HashMap<i16, i16>>,
     pool: Arc<PgPool>,
     http: Arc<Http>,
@@ -48,7 +48,7 @@ impl PointsNotification {
     }
 }
 
-impl Points {
+impl PointsNotifications {
     /*
 
     Updates logic:
