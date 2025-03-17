@@ -13,6 +13,7 @@ use crate::Error;
 #[derive(Debug)]
 pub struct LiveFixtures {
     pub id: i16,
+    pub minutes: i16,
     pub home_team_score: i16,
     pub away_team_score: i16,
     pub home_team_name: String,
@@ -88,6 +89,7 @@ impl ScoreNotifications {
             r#"    
             SELECT 
                 f.id as "id!",
+                f.minutes as "minutes!",
                 f.home_team_score as "home_team_score!",
                 f.away_team_score as "away_team_score!",
                 home_club.name AS "home_team_name!",
@@ -122,7 +124,10 @@ impl ScoreNotifications {
                 live_fixture_ids.insert(fixture.id);
                 match stored_scores.get(&fixture.id) {
                     None => {
-                        if !is_first_run {
+                        // Can have a delay so only send notifs if started is set to true in the first half.
+                        // However sometimes FPL set finished = False way after the game is done, so this check
+                        // ensures that notifications arent sent twice, one at the start and one hours later
+                        if !is_first_run && fixture.minutes < 45 {
                             notifications_vec.push(ScoreNotification {
                                 home_team: fixture.home_team_name,
                                 away_team: fixture.away_team_name,
